@@ -4,7 +4,16 @@ import com.example.sleepcycle.data.InMemorySleepPreferencesRepository
 import com.example.sleepcycle.model.SleepCalculator
 import com.example.sleepcycle.ui.CalculationMode
 import com.example.sleepcycle.ui.SleepViewModel
+import com.example.sleepcycle.ui.UpdateEvent
+import com.example.sleepcycle.ui.UpdateUiState
+import com.example.sleepcycle.update.UpdateChecker
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalTime
 
@@ -67,5 +76,105 @@ class SleepViewModelTest {
         // 退出重进（重新创建 ViewModel）
         val viewModel2 = SleepViewModel(preferencesRepository = repo)
         assertEquals(30, viewModel2.uiState.value.latencyMinutes)
+    }
+
+    @Test
+    fun testCheckForUpdatesHasUpdateFlow() = runBlocking {
+        val stubChecker = UpdateChecker(
+            httpFetcher = {
+                """
+                {
+                  "tag_name": "v1.2.0",
+                  "name": "v1.2.0 - 新特性",
+                  "body": "更新说明详情",
+                  "published_at": "2026-08-19T10:00:00Z",
+                  "html_url": "https://github.com/michiru233/SleepCycle/releases/tag/v1.2.0",
+                  "assets": []
+                }
+                """.trimIndent()
+            },
+            ioDispatcher = Dispatchers.Unconfined
+        )
+
+        val viewModel = SleepViewModel(
+            updateChecker = stubChecker,
+            appVersionName = "1.1.1",
+            externalScope = CoroutineScope(Dispatchers.Unconfined)
+        )
+
+        assertEquals(UpdateUiState.Idle, viewModel.uiState.value.updateUiState)
+
+        viewModel.checkForUpdates()
+
+        val state = viewModel.uiState.value.updateUiState
+        assertTrue(state is UpdateUiState.HasUpdate)
+        assertEquals("1.2.0", (state as UpdateUiState.HasUpdate).releaseInfo.versionName)
+
+        // 测试 dismissUpdateDialog
+        viewModel.dismissUpdateDialog()
+        assertEquals(UpdateUiState.Idle, viewModel.uiState.value.updateUiState)
+    }
+
+    @Test
+    fun testCheckForUpdatesUpToDateEmitsEvent() = runBlocking {
+        val stubChecker = UpdateChecker(
+            httpFetcher = {
+                """
+                {
+                  "tag_name": "v1.1.1",
+                  "name": "v1.1.1",
+                  "body": "当前已是最新",
+                  "published_at": "2026-08-19T10:00:00Z",
+                  "html_url": "https://github.com/michiru233/SleepCycle/releases/tag/v1.1.1",
+                  "assets": []
+                }
+                """.trimIndent()
+            },
+            ioDispatcher = Dispatchers.Unconfined
+        )
+
+        val viewModel = SleepViewModel(
+            updateChecker = stubChecker,
+            appVersionName = "1.1.1",
+            externalScope = CoroutineScope(Dispatchers.Unconfined)
+        )
+
+        var receivedEvent: UpdateEvent? = null
+        val job = launch(Dispatchers.Unconfined) {
+            receivedEvent = viewModel.updateEvents.first()
+        }
+
+        viewModel.checkForUpdates()
+
+        assertEquals(UpdateUiState.UpToDate, viewModel.uiState.value.updateUiState)
+        assertEquals(UpdateEvent.UpToDate, receivedEvent)
+        job.cancel()
+    }
+
+    @Test
+    fun testCheckForUpdatesErrorEmitsEvent() = runBlocking {
+        val errorChecker = UpdateChecker(
+            httpFetcher = { throw java.io.IOException("无法连接至 GitHub") },
+            ioDispatcher = Dispatchers.Unconfined
+        )
+
+        val viewModel = SleepViewModel(
+            updateChecker = errorChecker,
+            appVersionName = "1.1.1",
+            externalScope = CoroutineScope(Dispatchers.Unconfined)
+        )
+
+        var receivedEvent: UpdateEvent? = null
+        val job = launch(Dispatchers.Unconfined) {
+            receivedEvent = viewModel.updateEvents.first()
+        }
+
+        viewModel.checkForUpdates()
+
+        val state = viewModel.uiState.value.updateUiState
+        assertTrue(state is UpdateUiState.Error)
+        assertTrue((state as UpdateUiState.Error).message.contains("无法连接至 GitHub"))
+        assertTrue(receivedEvent is UpdateEvent.Error)
+        job.cancel()
     }
 }

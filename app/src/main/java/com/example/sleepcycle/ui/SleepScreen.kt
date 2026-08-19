@@ -1,5 +1,6 @@
 package com.example.sleepcycle.ui
 
+import android.widget.Toast
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -12,25 +13,22 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.NightsStay
-import androidx.compose.material.icons.filled.WbSunny
+import androidx.compose.material.icons.filled.SystemUpdateAlt
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.sleepcycle.alarm.AlarmIntentManager
-import com.example.sleepcycle.model.SleepRecommendation
 import com.example.sleepcycle.ui.theme.LocalSleepGradients
+import kotlinx.coroutines.flow.collectLatest
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,6 +39,33 @@ fun SleepScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val gradients = LocalSleepGradients.current
+
+    // 监听一次性更新事件（Toast 反馈）
+    LaunchedEffect(viewModel) {
+        viewModel.updateEvents.collectLatest { event ->
+            when (event) {
+                is UpdateEvent.UpToDate -> {
+                    Toast.makeText(context, "当前已是最新版本 (v${SleepViewModel.CURRENT_APP_VERSION})", Toast.LENGTH_SHORT).show()
+                }
+                is UpdateEvent.Error -> {
+                    Toast.makeText(context, "检查更新失败: ${event.message}", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
+    // 发现新版本时展示弹窗
+    val updateState = uiState.updateUiState
+    if (updateState is UpdateUiState.HasUpdate) {
+        UpdateDialog(
+            releaseInfo = updateState.releaseInfo,
+            onDismiss = { viewModel.dismissUpdateDialog() },
+            onDownload = {
+                openBrowserUrl(context, updateState.releaseInfo.downloadUrl)
+                viewModel.dismissUpdateDialog()
+            }
+        )
+    }
 
     Box(
         modifier = modifier
@@ -80,6 +105,26 @@ fun SleepScreen(
                                     text = "智能睡眠周期唤醒",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    },
+                    actions = {
+                        IconButton(
+                            onClick = { viewModel.checkForUpdates() },
+                            enabled = uiState.updateUiState !is UpdateUiState.Checking
+                        ) {
+                            if (uiState.updateUiState is UpdateUiState.Checking) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.SystemUpdateAlt,
+                                    contentDescription = "检查更新",
+                                    tint = MaterialTheme.colorScheme.primary
                                 )
                             }
                         }
