@@ -14,5 +14,6 @@ local.properties
 .kotlin/
 app/build/
 release_apk/
+*.apk
 BLOCKED.md
 PROGRESS.md

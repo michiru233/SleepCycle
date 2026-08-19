@@ -13,6 +13,11 @@
      git commit -m "<type>: <description>"
      git push origin main
      ```
-3. **版本迭代与 Release（重大/里程碑版本更新时）**：
-   - 适时更新 `app/build.gradle.kts` 中的 `versionCode` 与 `versionName`。
-   - 打包 APK 并通过 `gh release create` 更新 Release 资产。
+3. **版本迭代与 Release 资产交付规范**：
+   - 每次代码更新、修复或新功能完成后，适时更新 `app/build.gradle.kts` 中的 `versionCode` 与 `versionName`。
+   - 编译生成封包 APK：`./gradlew assembleDebug`（或 assembleRelease）。
+   - 将 APK 文件规范重命名为 `SleepCycle-v<版本号>.apk`（例如 `SleepCycle-v1.1.1.apk`）。
+   - 通过 GitHub CLI 创建/更新 Release 并上传打包好的 APK：
+     ```bash
+     gh release create v<版本号> SleepCycle-v<版本号>.apk --title "v<版本号> - <更新简述>" --notes "<更新日志>"
+     ```
