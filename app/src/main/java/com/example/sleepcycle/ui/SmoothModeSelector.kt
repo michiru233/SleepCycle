@@ -6,7 +6,6 @@ import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -15,13 +14,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -39,13 +33,12 @@ fun SmoothModeSelector(
 ) {
     val modes = CalculationMode.values()
     val selectedIndex = modes.indexOf(selectedMode).coerceAtLeast(0)
-    val density = LocalDensity.current
 
     val animatedFraction by animateFloatAsState(
         targetValue = selectedIndex.toFloat(),
         animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow
+            dampingRatio = Spring.DampingRatioLowBouncy,
+            stiffness = Spring.StiffnessMediumLow
         ),
         label = "mode_indicator_fraction"
     )
@@ -53,22 +46,22 @@ fun SmoothModeSelector(
     BoxWithConstraints(
         modifier = modifier
             .fillMaxWidth()
+            .height(48.dp)
             .clip(RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f))
             .padding(4.dp)
     ) {
         val totalWidth = maxWidth
         val itemWidth = totalWidth / modes.size
 
-        // 浮动发光胶囊指示器
+        // 浮动发光胶囊背景指示器
         Box(
             modifier = Modifier
                 .offset(x = itemWidth * animatedFraction)
                 .width(itemWidth)
                 .fillMaxHeight()
-                .padding(2.dp)
                 .shadow(
-                    elevation = 6.dp,
+                    elevation = 4.dp,
                     shape = RoundedCornerShape(12.dp),
                     spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)
                 )
@@ -78,7 +71,7 @@ fun SmoothModeSelector(
 
         // 标签项
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxSize(),
             verticalAlignment = Alignment.CenterVertically
         ) {
             modes.forEachIndexed { index, mode ->
@@ -88,14 +81,14 @@ fun SmoothModeSelector(
                 Box(
                     modifier = Modifier
                         .weight(1f)
+                        .fillMaxHeight()
                         .clip(RoundedCornerShape(12.dp))
                         .clickable(
                             interactionSource = interactionSource,
                             indication = null
                         ) {
                             onModeSelected(mode)
-                        }
-                        .padding(vertical = 12.dp, horizontal = 4.dp),
+                        },
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
