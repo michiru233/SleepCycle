@@ -1,6 +1,15 @@
 package com.example.sleepcycle.ui
 
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import com.example.sleepcycle.data.InMemorySleepPreferencesRepository
+import com.example.sleepcycle.data.SharedPreferencesSleepPreferencesRepository
+import com.example.sleepcycle.data.SleepPreferencesRepository
 import com.example.sleepcycle.model.SleepCalculator
 import com.example.sleepcycle.model.SleepRecommendation
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,9 +34,15 @@ data class SleepUiState(
     val recommendations: List<SleepRecommendation> = emptyList()
 )
 
-class SleepViewModel : ViewModel() {
+class SleepViewModel(
+    private val preferencesRepository: SleepPreferencesRepository = InMemorySleepPreferencesRepository()
+) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(SleepUiState())
+    private val _uiState = MutableStateFlow(
+        SleepUiState(
+            latencyMinutes = preferencesRepository.getLatencyMinutes()
+        )
+    )
     val uiState: StateFlow<SleepUiState> = _uiState.asStateFlow()
 
     init {
@@ -55,7 +70,9 @@ class SleepViewModel : ViewModel() {
     }
 
     fun onLatencyChanged(latency: Int) {
-        _uiState.update { it.copy(latencyMinutes = latency.coerceIn(0, 60)) }
+        val clampedLatency = latency.coerceIn(0, 60)
+        preferencesRepository.setLatencyMinutes(clampedLatency)
+        _uiState.update { it.copy(latencyMinutes = clampedLatency) }
         recalculate()
     }
 
@@ -81,6 +98,16 @@ class SleepViewModel : ViewModel() {
                 }
             }
             state.copy(recommendations = results)
+        }
+    }
+
+    companion object {
+        val Factory: ViewModelProvider.Factory = viewModelFactory {
+            initializer {
+                val application = this[APPLICATION_KEY] as Application
+                val repository = SharedPreferencesSleepPreferencesRepository.create(application)
+                SleepViewModel(repository)
+            }
         }
     }
 }

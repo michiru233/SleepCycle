@@ -12,7 +12,7 @@ import com.example.sleepcycle.ui.SleepViewModel
 import com.example.sleepcycle.ui.theme.SleepCycleTheme
 
 class MainActivity : ComponentActivity() {
-    private val viewModel: SleepViewModel by viewModels()
+    private val viewModel: SleepViewModel by viewModels { SleepViewModel.Factory }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
