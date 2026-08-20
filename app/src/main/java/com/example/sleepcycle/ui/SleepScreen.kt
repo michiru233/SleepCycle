@@ -281,12 +281,16 @@ fun ModernScientificNoteCard(modifier: Modifier = Modifier) {
                     content = "人类正常睡眠由 90 分钟的周期循环构成（浅睡、深睡与快速眼动期）。在周期交界处的浅睡期唤醒能让人感到神清气爽。"
                 )
                 ScienceTipItem(
+                    title = "高效午睡与能量小憩",
+                    content = "1个周期（90分钟）是完美的午睡/高效小憩时长，能完整体验一次睡眠周期且醒来不昏沉；2个周期（3小时）适合深度补能。"
+                )
+                ScienceTipItem(
                     title = "避开深睡强行唤醒",
                     content = "若在深睡期被闹钟强行打断，会引发严重的“睡眠惯性”，导致大脑长时间昏沉迟钝。"
                 )
                 ScienceTipItem(
-                    title = "推荐 5~6 个周期",
-                    content = "成年人每晚通常需要 5~6 个完整周期（7.5~9 小时）以完成深层次身体修复与记忆巩固。"
+                    title = "推荐 5~6 个夜间周期",
+                    content = "成年人每晚通常建议 5~6 个完整周期（7.5~9 小时）以完成深层次身体修复与记忆巩固。"
                 )
             }
         }

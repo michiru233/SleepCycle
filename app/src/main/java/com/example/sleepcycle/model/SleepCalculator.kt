@@ -15,19 +15,19 @@ object SleepCalculator {
     const val RECOMMENDED_CYCLE_COUNT = 5
 
     /**
-     * 根据入睡时间正推起床时间列表 (推荐 3~6 个周期)
+     * 根据入睡时间正推起床时间列表 (推荐 1~6 个周期)
      *
      * 实际入睡点 = bedtime + latencyMinutes
      * 起床时间 = 实际入睡点 + cycleCount * 90min
      *
      * @param bedtime 准备上床/入睡时间
      * @param latencyMinutes 入睡潜伏期缓冲时间 (默认 14 分钟)
-     * @param cycleRange 周期范围 (默认 3..6)
+     * @param cycleRange 周期范围 (默认 1..6)
      */
     fun calculateWakeUpTimes(
         bedtime: LocalTime,
         latencyMinutes: Int = DEFAULT_FALL_ASLEEP_LATENCY_MINUTES,
-        cycleRange: IntRange = 3..6
+        cycleRange: IntRange = 1..6
     ): List<SleepRecommendation> {
         val actualSleepStartTime = bedtime.plusMinutes(latencyMinutes.toLong())
         return cycleRange.map { cycles ->
@@ -44,19 +44,19 @@ object SleepCalculator {
     }
 
     /**
-     * 根据期望起床时间倒推上床睡觉时间列表 (推荐 3~6 个周期)
+     * 根据期望起床时间倒推上床睡觉时间列表 (推荐 1~6 个周期)
      *
      * 实际入睡点 = wakeTime - cycleCount * 90min
      * 上床时间 = 实际入睡点 - latencyMinutes
      *
      * @param wakeTime 期望起床时间
      * @param latencyMinutes 入睡潜伏期缓冲时间 (默认 14 分钟)
-     * @param cycleRange 周期范围 (默认 3..6)
+     * @param cycleRange 周期范围 (默认 1..6)
      */
     fun calculateBedtimes(
         wakeTime: LocalTime,
         latencyMinutes: Int = DEFAULT_FALL_ASLEEP_LATENCY_MINUTES,
-        cycleRange: IntRange = 3..6
+        cycleRange: IntRange = 1..6
     ): List<SleepRecommendation> {
         return cycleRange.map { cycles ->
             val sleepDurationMinutes = cycles * CYCLE_MINUTES
@@ -96,6 +96,8 @@ object SleepCalculator {
             5 -> SleepQuality.EXCELLENT
             4 -> SleepQuality.OPTIMAL
             3 -> SleepQuality.SUFFICIENT
+            2 -> SleepQuality.RECHARGE
+            1 -> SleepQuality.NAP
             else -> SleepQuality.SHORT
         }
     }

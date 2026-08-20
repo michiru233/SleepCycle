@@ -10,6 +10,8 @@ enum class SleepQuality(val label: String, val description: String) {
     EXCELLENT("极佳", "精力充沛，神清气爽（推荐）"),
     OPTIMAL("充足", "符合成年人充足睡眠标准"),
     SUFFICIENT("尚可", "可维持日常基本专注力"),
+    RECHARGE("补能", "适合午后深度补觉或应急休整"),
+    NAP("午睡", "1个完整周期，快速恢复精力且不昏沉"),
     SHORT("勉强", "稍短，可能偶感疲惫")
 }
 

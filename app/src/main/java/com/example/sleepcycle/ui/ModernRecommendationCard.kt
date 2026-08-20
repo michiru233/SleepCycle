@@ -246,6 +246,8 @@ fun ModernQualityChip(quality: SleepQuality) {
         SleepQuality.EXCELLENT -> Color(0xFF10B981).copy(alpha = 0.16f) to Color(0xFF10B981)
         SleepQuality.OPTIMAL -> Color(0xFF38BDF8).copy(alpha = 0.16f) to Color(0xFF0284C7)
         SleepQuality.SUFFICIENT -> Color(0xFFF59E0B).copy(alpha = 0.16f) to Color(0xFFD97706)
+        SleepQuality.RECHARGE -> Color(0xFFA855F7).copy(alpha = 0.16f) to Color(0xFF9333EA)
+        SleepQuality.NAP -> Color(0xFF06B6D4).copy(alpha = 0.16f) to Color(0xFF0891B2)
         SleepQuality.SHORT -> Color(0xFFEF4444).copy(alpha = 0.16f) to Color(0xFFDC2626)
     }
 
