@@ -57,7 +57,7 @@ $$睡眠总时长 = 周期数 \times 90分钟 + 入睡潜伏期（默认14分钟
 <div align="center">
   <img src="docs/screenshots/sleep_cycle_now.png" width="30%" alt="我现在就睡" />
   <img src="docs/screenshots/sleep_cycle_plan_bedtime.png" width="30%" alt="规划入睡时间" />
-  <img src="docs/screenshots/sleep_cycle_alarm_triggered.png" width="30%" alt="一键联动系统闹钟" />
+  <img src="docs/screenshots/sleep_cycle_latency_dialog.png" width="30%" alt="入睡潜伏期设置" />
 </div>
 
 ---
@@ -65,7 +65,7 @@ $$睡眠总时长 = 周期数 \times 90分钟 + 入睡潜伏期（默认14分钟
 ## 📥 下载安装
 
 前往 [Releases 页面](../../releases/latest) 下载最新的 APK 安装包：
-- **[SleepCycle-v1.0.apk](../../releases/latest)**
+- **[SleepCycle-v1.3.0.apk](../../releases/latest)**
 
 > 适配 Android 8.0 (API Level 26) 及以上版本系统。
 
