@@ -68,4 +68,14 @@
 - [x] **GitHub Release**：`gh release create v1.5.0 SleepCycle-v1.5.0.apk --title "v1.5.0 - 高效小睡与睡眠惰性提示" ...` 成功，返回 `https://github.com/michiru233/SleepCycle/releases/tag/v1.5.0`。
 - [x] **最终硬指标核验**：`gh release view v1.5.0` 显示标题、tag、URL 和附件 `asset: SleepCycle-v1.5.0.apk`；`git log origin/main -1 --oneline` 输出 `36c6e04 feat(nap): 新增高效小睡档位与睡眠惰性提示`；`git status --short --branch` 输出 `## main...origin/main`。
 
+## 8. Neat-freak 知识收尾审计 (2026-08-25)
+- **代码：changed-and-verified**。当前 `origin/main` 为 `c218361 feat(nap): 新增高效小睡档位与睡眠惰性提示`；小睡模型、ViewModel 状态、App 内 coffee nap 弹窗、系统闹钟复用和睡眠惰性卡片均有对应测试/构建证据。
+- **运行态：changed-and-verified（Release live surface）**。GitHub Release `v1.5.0` 可访问，附件 `SleepCycle-v1.5.0.apk`，大小 18194793 bytes；未配置独立服务或生产部署，因此服务端运行态不适用。
+- **文档：changed-and-verified**。README 已同步 v1.5.0 下载入口、小睡档位、Coffee nap、Brooks & Lack（2006）、NASA 约 26 分钟/约 34% 警觉度提升及个体差异提示。
+- **规则：verified-current**。项目唯一生效规则为根目录 `AGENTS.md`；本次未修改规则文件。
+- **记忆：not-applicable**。未发现项目级可写记忆系统；未写入平台生成记忆。
+- **工作区：verified-current**。`git status --short --branch` 为 `## main...origin/main`，仅一个 worktree，无会话计划/备份残留。
+- **发布提交差异：pending / 已知**。Release tag `v1.5.0` 当前指向 `36c6e04`，`origin/main` 指向 `c218361`；后者仅补入本文件的发布核验记录，代码与 README 改动内容一致；未移动已发布 tag。
+- **待清理候选（未删除，等待用户确认）**：根目录 `SleepCycle-v1.4.0.apk`（历史 Release 资产本地副本）和 `SleepCycle-v1.5.0.apk`（本次 Release 上传副本）。两者均未纳入 Git，删除属于清场动作，本次保留现场。
+
 ## 5. 本期任务 0：小睡与睡眠惰性功能开工回执 (2026-08-25)
