@@ -1,12 +1,14 @@
 package com.example.sleepcycle.data
 
 import androidx.room.Dao
+import androidx.room.Database
 import androidx.room.Entity
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.RoomDatabase
-import androidx.room.Database
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.sleepcycle.model.ChronotypeAnswers
 import com.example.sleepcycle.model.ChronotypeCategory
 import com.example.sleepcycle.model.ChronotypeProfile
@@ -59,9 +61,6 @@ fun ChronotypeProfileEntity.toProfile(): ChronotypeProfile = ChronotypeProfile(
     updatedAtEpochMillis = updatedAtEpochMillis
 )
 
-private fun LocalTime.toMinuteOfDay(): Int = hour * 60 + minute
-private fun Int.toLocalTime(): LocalTime = LocalTime.of(this / 60, this % 60)
-
 @Dao
 interface ChronotypeProfileDao {
     @Query("SELECT * FROM chronotype_profile WHERE profileId = 1")
@@ -71,9 +70,29 @@ interface ChronotypeProfileDao {
     suspend fun saveProfile(profile: ChronotypeProfileEntity)
 }
 
-@Database(entities = [ChronotypeProfileEntity::class], version = 1, exportSchema = false)
+@Database(
+    entities = [ChronotypeProfileEntity::class, SleepRecordEntity::class, SleepSettingsEntity::class],
+    version = 2,
+    exportSchema = false
+)
 abstract class SleepCycleDatabase : RoomDatabase() {
     abstract fun chronotypeProfileDao(): ChronotypeProfileDao
+    abstract fun sleepRecordDao(): SleepRecordDao
+    abstract fun sleepSettingsDao(): SleepSettingsDao
+
+    companion object {
+        val MIGRATION_1_2: Migration = object : Migration(1, 2) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL(
+                    "CREATE TABLE IF NOT EXISTS sleep_record (dateEpochDay INTEGER NOT NULL, bedtimeMinutes INTEGER NOT NULL, wakeTimeMinutes INTEGER NOT NULL, primarySleepMinutes INTEGER NOT NULL, napMinutes INTEGER NOT NULL, PRIMARY KEY(dateEpochDay))"
+                )
+                database.execSQL(
+                    "CREATE TABLE IF NOT EXISTS sleep_settings (settingsId INTEGER NOT NULL, targetMinutes INTEGER NOT NULL, PRIMARY KEY(settingsId))"
+                )
+                database.execSQL("INSERT OR IGNORE INTO sleep_settings (settingsId, targetMinutes) VALUES (1, 480)")
+            }
+        }
+    }
 }
 
 interface ChronotypeProfileRepository {
@@ -101,3 +120,6 @@ class InMemoryChronotypeProfileRepository(
         this.profile = profile
     }
 }
+
+private fun LocalTime.toMinuteOfDay(): Int = hour * 60 + minute
+private fun Int.toLocalTime(): LocalTime = LocalTime.of(this / 60, this % 60)

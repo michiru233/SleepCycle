@@ -178,6 +178,25 @@ fun SleepScreen(
                 }
 
                 item {
+                    SleepRecordSection(
+                        state = uiState,
+                        onDateChanged = { viewModel.updateSleepRecordForm(date = it) },
+                        onBedtimeChanged = { viewModel.updateSleepRecordForm(bedtime = it) },
+                        onWakeTimeChanged = { viewModel.updateSleepRecordForm(wakeTime = it) },
+                        onPrimaryChanged = { viewModel.updateSleepRecordForm(primarySleepMinutes = it) },
+                        onNapChanged = { viewModel.updateSleepRecordForm(napMinutes = it) },
+                        onSave = { viewModel.saveSleepRecord() },
+                        onDelete = { viewModel.deleteSleepRecord(it) },
+                        onEdit = { viewModel.editSleepRecord(it) },
+                        onTargetChanged = { viewModel.saveSleepTarget(it) }
+                    )
+                }
+
+                item {
+                    SleepAnalysisSection(state = uiState)
+                }
+
+                item {
                     ChronotypeCard(
                         profile = uiState.chronotypeProfile,
                         answers = uiState.chronotypeAnswers,

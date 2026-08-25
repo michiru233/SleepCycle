@@ -1,4 +1,24 @@
-## 12. Neat-freak 知识收尾审计 (2026-08-25)
+## 14. 本期任务 1–4：睡眠记录、缺口、社会时差与双过程实现记录 (2026-08-26)
+- [x] **任务 1 数据层**：新增 `SleepRecordEntity`、`SleepSettingsEntity`、DAO、Room/InMemory Repository；日期主键 upsert，跨午夜时长/中点与目标校验已覆盖。
+- [x] **Room version 2**：`SleepCycleDatabase` 保留 `ChronotypeProfileEntity`，新增显式 `MIGRATION_1_2` 创建两表和默认目标；Factory 注册 migration 并注入 Room 睡眠仓库；未使用 destructive migration。
+- [x] **任务 2 纯模型**：新增 14 天估算睡眠缺口、午睡抵扣、工作日/休息日环形中点社会时差，并限制最近 14 天与每组至少 2 条。
+- [x] **任务 3 双过程**：新增集中参数的指数 Process S、24 小时 Process C、综合睡眠倾向和 48 个 30 分钟点；时间型睡眠中点作为警觉低谷相位，无档案使用默认相位。
+- [x] **任务 4 UI/ViewModel**：SleepScreen 新增手动日期/时间/实际主睡眠/午睡记录、目标滑块、统计卡、社会时差状态和 Canvas 曲线；保存后重新读取，异常有明确状态。
+- [x] **新增测试**：`SleepRecordStorageTest` 3、`SleepAnalysisTest` 7、`SleepRecordViewModelTest` 5，聚焦测试已全绿；既有四文件仍为 `13/7/6/2`。
+- **实现取舍**：为满足“实际主睡眠分钟数”可编辑，表单同时显示时间段估算和实际分钟输入；模型算法不散落在 Compose。
+- **限制**：当前无 adb 设备，真实 SQLite migration 未执行，详情见 `BLOCKED.md`；其余本地纯 JVM/编译验证继续执行。
+
+## 15. 本期最终回归与交付证据 (2026-08-26)
+- [x] `./gradlew testDebugUnitTest`：`BUILD SUCCESSFUL`，60 tests executed；无 skipped/ignored。
+- [x] 既有文件计数：`SleepCalculatorTest=13`、`SleepViewModelTest=7`、`UpdateCheckerTest=6`、`AlarmIntentManagerTest=2`。
+- [x] 反向验证红：临时将社会时差断言 `45` 改为 `46`，`SleepAnalysisTest` 输出 `7 tests completed, 1 failed`；恢复后同命令 `BUILD SUCCESSFUL`。
+- [x] `./gradlew assembleDebug`：`BUILD SUCCESSFUL`（38 actionable tasks）；APK `SleepCycle-v1.7.0.apk` 已复制，大小 18,457,679 bytes。
+- [ ] 真实 Room SQLite migration 仍受本机无 adb 设备限制，已如实记录在 `BLOCKED.md`。
+- **基线核验**：`./gradlew testDebugUnitTest` 输出 `BUILD SUCCESSFUL`（27 actionable tasks）；`./gradlew assembleDebug` 输出 `BUILD SUCCESSFUL`（38 actionable tasks）。
+- **当前状态**：工作区干净且 `main...origin/main` 同步；远端 HEAD 为 `12126f9 feat(chronotype): 增加时间型测评与光照提醒`；版本为 `versionCode 8 / versionName 1.6.0`。
+- **目标**：在保留 ChronotypeProfile 数据的前提下，增加手动睡眠记录、睡眠目标、估算睡眠缺口、社会时差和 Borbély 双过程模型，并接入现有 SleepScreen。
+- **执行顺序**：数据模型/Room version 2 与迁移 -> 纯 Kotlin 缺口/社会时差计算 -> 双过程模型 -> Repository/ViewModel/UI -> README、回归、反向验证、版本与发布。
+- **最大风险**：Room 显式迁移不能丢失既有时间型档案；跨午夜与环形中点边界；Compose 小屏布局与既有入口回归；发布/推送失败需保留原始证据。
 - **代码：changed-and-verified**。v1.6.0 代码包含时间型模型/跨午夜中点、Room 单用户档案、ViewModel StateFlow、晨光/数字日落建议和系统闹钟入口；当前远端 HEAD 为本期 `feat(chronotype): 增加时间型测评与光照提醒` 提交；具体 hash 以最后一次 `git log origin/main -1 --oneline` 输出为准。
 - **运行态：changed-and-verified（Release live surface）**。`gh release view v1.6.0` 显示非 draft、非 prerelease，Release URL 为 `https://github.com/michiru233/SleepCycle/releases/tag/v1.6.0`，资产为 `SleepCycle-v1.6.0.apk`；无独立服务或生产部署，服务端运行态 not-applicable。
 - **文档：changed-and-verified**。README 已对齐 v1.6.0 下载入口、时间型阈值、Room/光照组件、科学来源和权限限制；历史版本记录保留为历史，不再作为当前状态。

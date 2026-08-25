@@ -14,7 +14,9 @@ import com.example.sleepcycle.data.SleepPreferencesRepository
 import com.example.sleepcycle.data.ChronotypeProfileRepository
 import com.example.sleepcycle.data.InMemoryChronotypeProfileRepository
 import com.example.sleepcycle.data.RoomChronotypeProfileRepository
+import com.example.sleepcycle.data.RoomSleepRecordRepository
 import com.example.sleepcycle.data.SleepCycleDatabase
+import com.example.sleepcycle.data.SleepRecordRepository
 import com.example.sleepcycle.model.ChronotypeAnswers
 import com.example.sleepcycle.model.ChronotypeCalculator
 import com.example.sleepcycle.model.ChronotypeProfile
@@ -22,6 +24,13 @@ import com.example.sleepcycle.model.LightGuidance
 import com.example.sleepcycle.model.LightGuidanceCalculator
 import com.example.sleepcycle.model.SleepCalculator
 import com.example.sleepcycle.model.SleepRecommendation
+import com.example.sleepcycle.model.SleepRecord
+import com.example.sleepcycle.model.SleepSettings
+import com.example.sleepcycle.model.SleepStatsCalculator
+import com.example.sleepcycle.model.SocialJetLagCalculator
+import com.example.sleepcycle.model.SocialJetLagResult
+import com.example.sleepcycle.model.TwoProcessModel
+import com.example.sleepcycle.model.TwoProcessPoint
 import com.example.sleepcycle.model.NapAlarmRequest
 import com.example.sleepcycle.model.NapType
 import com.example.sleepcycle.model.SLEEP_INERTIA_GUIDANCE
@@ -38,6 +47,8 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.LocalTime
 
 /**
@@ -83,8 +94,27 @@ data class SleepUiState(
     val isChronotypeEditing: Boolean = false,
     val chronotypeSaveState: ChronotypeSaveState = ChronotypeSaveState.Idle,
     val morningLightGuidance: LightGuidance.MorningLight? = null,
-    val digitalSunsetGuidance: LightGuidance.DigitalSunset? = null
+    val digitalSunsetGuidance: LightGuidance.DigitalSunset? = null,
+    val sleepRecords: List<SleepRecord> = emptyList(),
+    val sleepSettings: SleepSettings = SleepSettings(),
+    val sleepGapSummary: com.example.sleepcycle.model.SleepGapSummary = SleepStatsCalculator.summarize(emptyList(), SleepSettings().targetMinutes),
+    val socialJetLag: SocialJetLagResult = SocialJetLagResult.Incomplete,
+    val twoProcessPoints: List<TwoProcessPoint> = emptyList(),
+    val recordDate: LocalDate = LocalDate.now().minusDays(1),
+    val recordBedtime: LocalTime = LocalTime.of(23, 0),
+    val recordWakeTime: LocalTime = LocalTime.of(7, 0),
+    val recordPrimarySleepMinutes: Int = 480,
+    val recordNapMinutes: Int = 0,
+    val recordSaveState: SleepRecordSaveState = SleepRecordSaveState.Idle,
+    val sleepDataError: String? = null
 )
+
+sealed class SleepRecordSaveState {
+    data object Idle : SleepRecordSaveState()
+    data object Saving : SleepRecordSaveState()
+    data object Saved : SleepRecordSaveState()
+    data class Error(val message: String) : SleepRecordSaveState()
+}
 
 sealed class ChronotypeSaveState {
     data object Idle : ChronotypeSaveState()
@@ -103,6 +133,7 @@ class SleepViewModel(
     private val updateChecker: UpdateChecker = UpdateChecker(),
     private val appVersionName: String = CURRENT_APP_VERSION,
     private val chronotypeRepository: ChronotypeProfileRepository = InMemoryChronotypeProfileRepository(),
+    private val sleepRecordRepository: SleepRecordRepository = com.example.sleepcycle.data.InMemorySleepRecordRepository(),
     private val externalScope: CoroutineScope? = null
 ) : ViewModel() {
 
@@ -125,6 +156,106 @@ class SleepViewModel(
     init {
         recalculate()
         loadChronotype()
+        loadSleepData()
+    }
+
+    private fun loadSleepData() {
+        scope.launch(Dispatchers.Unconfined) {
+            runCatching {
+                val settings = sleepRecordRepository.loadSettings()
+                val records = sleepRecordRepository.loadRecords()
+                settings to records
+            }.onSuccess { (settings, records) ->
+                _uiState.update { it.withSleepData(records, settings, chronotypeProfile = it.chronotypeProfile) }
+            }.onFailure { error ->
+                _uiState.update { it.copy(sleepDataError = error.message ?: "睡眠记录读取失败") }
+            }
+        }
+    }
+
+    private fun SleepUiState.withSleepData(
+        records: List<SleepRecord>,
+        settings: SleepSettings,
+        chronotypeProfile: ChronotypeProfile? = this.chronotypeProfile
+    ): SleepUiState = copy(
+        sleepRecords = records,
+        sleepSettings = settings,
+        sleepGapSummary = SleepStatsCalculator.summarize(records, settings.targetMinutes),
+        socialJetLag = SocialJetLagCalculator.calculate(records),
+        twoProcessPoints = TwoProcessModel.generate(records, chronotypeProfile, LocalDateTime.now(), settings.targetMinutes),
+        sleepDataError = null
+    )
+
+    fun updateSleepRecordForm(
+        date: LocalDate = _uiState.value.recordDate,
+        bedtime: LocalTime = _uiState.value.recordBedtime,
+        wakeTime: LocalTime = _uiState.value.recordWakeTime,
+        primarySleepMinutes: Int = _uiState.value.recordPrimarySleepMinutes,
+        napMinutes: Int = _uiState.value.recordNapMinutes
+    ) {
+        _uiState.update { it.copy(recordDate = date, recordBedtime = bedtime, recordWakeTime = wakeTime, recordPrimarySleepMinutes = primarySleepMinutes, recordNapMinutes = napMinutes) }
+    }
+
+    fun editSleepRecord(date: LocalDate) {
+        scope.launch(Dispatchers.Unconfined) {
+            runCatching { sleepRecordRepository.getRecord(date) }
+                .onSuccess { record ->
+                    if (record != null) _uiState.update {
+                        it.copy(recordDate = record.date, recordBedtime = record.bedtime, recordWakeTime = record.wakeTime, recordPrimarySleepMinutes = record.primarySleepMinutes, recordNapMinutes = record.napMinutes, recordSaveState = SleepRecordSaveState.Idle)
+                    }
+                }
+                .onFailure { error -> _uiState.update { it.copy(sleepDataError = error.message ?: "睡眠记录读取失败") } }
+        }
+    }
+
+    fun saveSleepRecord() {
+        val state = _uiState.value
+        val primaryMinutes = state.recordPrimarySleepMinutes
+        val napMinutes = state.recordNapMinutes
+        if (state.recordDate.isAfter(LocalDate.now()) || primaryMinutes !in 1..SleepRecord.MINUTES_PER_DAY || napMinutes !in 0..SleepRecord.MINUTES_PER_DAY) {
+            _uiState.update { it.copy(recordSaveState = SleepRecordSaveState.Error("日期或午睡分钟数无效")) }
+            return
+        }
+        val record = runCatching { SleepRecord(state.recordDate, state.recordBedtime, state.recordWakeTime, primaryMinutes, napMinutes) }
+            .getOrElse { error ->
+                _uiState.update { it.copy(recordSaveState = SleepRecordSaveState.Error(error.message ?: "睡眠记录无效")) }
+                return
+            }
+        _uiState.update { it.copy(recordSaveState = SleepRecordSaveState.Saving) }
+        scope.launch(Dispatchers.Unconfined) {
+            runCatching {
+                sleepRecordRepository.saveRecord(record)
+                sleepRecordRepository.loadRecords()
+            }.onSuccess { records ->
+                _uiState.update { it.copy(recordSaveState = SleepRecordSaveState.Saved).withSleepData(records, it.sleepSettings) }
+            }.onFailure { error ->
+                _uiState.update { it.copy(recordSaveState = SleepRecordSaveState.Error(error.message ?: "睡眠记录保存失败"), sleepDataError = error.message) }
+            }
+        }
+    }
+
+    fun deleteSleepRecord(date: LocalDate) {
+        scope.launch(Dispatchers.Unconfined) {
+            runCatching {
+                sleepRecordRepository.deleteRecord(date)
+                sleepRecordRepository.loadRecords()
+            }.onSuccess { records -> _uiState.update { it.withSleepData(records, it.sleepSettings) } }
+                .onFailure { error -> _uiState.update { it.copy(sleepDataError = error.message ?: "睡眠记录删除失败") } }
+        }
+    }
+
+    fun saveSleepTarget(targetMinutes: Int) {
+        val settings = runCatching { SleepSettings(targetMinutes) }.getOrElse { error ->
+            _uiState.update { it.copy(sleepDataError = error.message ?: "睡眠目标无效") }
+            return
+        }
+        scope.launch(Dispatchers.Unconfined) {
+            runCatching {
+                sleepRecordRepository.saveSettings(settings)
+                sleepRecordRepository.loadSettings()
+            }.onSuccess { saved -> _uiState.update { it.withSleepData(it.sleepRecords, saved) } }
+                .onFailure { error -> _uiState.update { it.copy(sleepDataError = error.message ?: "睡眠目标保存失败") } }
+        }
     }
 
     private fun loadChronotype() {
@@ -139,7 +270,7 @@ class SleepViewModel(
                             chronotypeSaveState = ChronotypeSaveState.Idle,
                             morningLightGuidance = profile?.answers?.workdayWakeTime?.let { wake -> LightGuidanceCalculator.morningLight(wake, profile) } ?: it.morningLightGuidance,
                             digitalSunsetGuidance = profile?.answers?.workdaySleepTime?.let { sleep -> LightGuidanceCalculator.digitalSunset(sleep, profile) } ?: it.digitalSunsetGuidance
-                        )
+                        ).withSleepData(it.sleepRecords, it.sleepSettings, profile)
                     }
                 }
                 .onFailure { error -> _uiState.update { it.copy(chronotypeSaveState = ChronotypeSaveState.Error(error.message ?: "时间型档案读取失败")) } }
@@ -348,7 +479,7 @@ class SleepViewModel(
     }
 
     companion object {
-        const val CURRENT_APP_VERSION = "1.6.0"
+        const val CURRENT_APP_VERSION = "1.7.0"
 
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
@@ -358,8 +489,9 @@ class SleepViewModel(
                     application,
                     SleepCycleDatabase::class.java,
                     "sleep_cycle.db"
-                ).build()
+                ).addMigrations(SleepCycleDatabase.MIGRATION_1_2).build()
                 val chronotypeRepository = RoomChronotypeProfileRepository(database.chronotypeProfileDao())
+                val sleepRecordRepository = RoomSleepRecordRepository(database.sleepRecordDao(), database.sleepSettingsDao())
                 val versionName = try {
                     val pInfo = application.packageManager.getPackageInfo(application.packageName, 0)
                     pInfo.versionName ?: CURRENT_APP_VERSION
@@ -370,7 +502,8 @@ class SleepViewModel(
                     preferencesRepository = repository,
                     updateChecker = UpdateChecker(),
                     appVersionName = versionName,
-                    chronotypeRepository = chronotypeRepository
+                    chronotypeRepository = chronotypeRepository,
+                    sleepRecordRepository = sleepRecordRepository
                 )
             }
         }

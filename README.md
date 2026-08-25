@@ -17,6 +17,14 @@
 
 ## ✨ 功能特性
 
+- 🛏️ **手动睡眠记录与 14 天分析**：
+  - 逐日保存入睡日期、入睡/起床时间、实际主睡眠分钟数和可选午睡分钟数；同一日期再次保存会更新原记录。
+  - 默认「睡眠目标」为 480 分钟，可按 15 分钟在 360–600 分钟间调整。跨午夜记录按入睡所在日归档，缺失日期不伪造为已记录睡眠。
+  - 「估算睡眠缺口」按最近 14 个完整本地日期计算 `max(0, 睡眠目标 - 主睡眠 - 午睡)` 的总和；它是估算和行为参考，不代表可以精确量化或完全偿还睡眠债务。
+  - 「社会时差」分别对工作日与休息日的睡眠中点做跨午夜环形平均；任一组少于 2 条时显示「数据不足」。相关性不等于因果关系。
+- 🧮 **Borbély 双过程模型参考**：
+  - 使用指数形式的 Process S（清醒累积、睡眠衰减）与 24 小时 Process C 正弦/余弦近似，输出每 30 分钟一个点的 24 小时睡眠压力、昼夜节律警觉信号和综合睡眠倾向。
+  - 曲线标注「模型估算」和「模型参考」；时间型睡眠中点优先用于节律相位，没有档案时使用明确的默认相位。模型不测量褪黑素、SCN 或个人生理参数，也不能替代多导睡眠监测。
 - 🕒 **三大科学规划模式**：
   - **我现在就睡 (Sleep Now)**：以当前系统时间为基准，自动叠加入睡潜伏期并计算未来 1~6 个周期的最佳起床节点。
   - **规划起床时间 (Wake Up Time)**：输入目标起床时刻，倒推最科学的入睡与上床时间。
@@ -60,7 +68,7 @@
 
 如果在**深睡眠阶段**被闹钟惊醒，人会感到异常疲惫、头晕并产生严重的睡眠惯性；而如果在**周期结束时的浅睡眠或 REM 阶段末期**醒来，身体会感到神清气爽、精力充沛。
 
-时间型与光照建议的依据包括：Borbély（1982）双过程睡眠调节综述与昼夜节律研究；Horne & Östberg（1976）《A self-assessment questionnaire to determine morningness-eveningness》；Roenneberg 等（2003）基于 MCTQ 的社会时差研究。以上资料访问日期：2026-08-25。App 的简化测评仅用于自我了解，不替代医学评估。
+时间型与光照建议的依据包括：Borbély（1982）双过程睡眠调节综述与昼夜节律研究；Horne & Östberg（1976）《A self-assessment questionnaire to determine morningness-eveningness》；Roenneberg 等（2003）基于 MCTQ 的社会时差研究。睡眠缺口定义参考 Van Dongen 等（2003）关于睡眠限制与累积缺口/警觉表现的研究；社会时差概念参考 Roenneberg 等（2003）及 MCTQ 研究。双过程曲线是启发式近似，不是个人生理实测，不能替代多导睡眠监测；统计相关性不等于因果关系。以上资料访问日期：2026-08-26。
 
 $$睡眠总时长 = 周期数 \times 90分钟 + 入睡潜伏期（默认14分钟）$$
 
@@ -87,7 +95,7 @@ $$睡眠总时长 = 周期数 \times 90分钟 + 入睡潜伏期（默认14分钟
 ## 📥 下载安装
 
 前往 [Releases 页面](../../releases/latest) 下载最新的 APK 安装包：
-- **[SleepCycle-v1.6.0.apk](../../releases/latest)**
+- **[SleepCycle-v1.7.0.apk](../../releases/latest)**
 
 > 适配 Android 8.0 (API Level 26) 及以上版本系统。
 
@@ -102,7 +110,8 @@ $$睡眠总时长 = 周期数 \times 90分钟 + 入睡潜伏期（默认14分钟
   - `SleepCalculator`: 纯 Kotlin 周期算力引擎（100% 单元测试覆盖）
   - `AlarmIntentManager`: 系统原生闹钟协议封装与容错处理
   - `ChronotypeCalculator` + `LightGuidanceCalculator`: 时间型中点分类、晨光与数字日落建议
-  - `ChronotypeProfileEntity` + Room：单用户时间型档案持久化
+  - `SleepRecordEntity` + `SleepSettingsEntity` + Room version 2：手动睡眠记录与睡眠目标，显式保留 version 1 时间型档案
+  - `SleepStatsCalculator` + `SocialJetLagCalculator` + `TwoProcessModel`：14 天估算统计和 24 小时模型曲线
   - `SleepViewModel` & `StateFlow`: 响应式状态管理
 
 ---
