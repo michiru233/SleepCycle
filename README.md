@@ -101,6 +101,8 @@ $$睡眠总时长 = 周期数 \times 90分钟 + 入睡潜伏期（默认14分钟
 - **核心组件**：
   - `SleepCalculator`: 纯 Kotlin 周期算力引擎（100% 单元测试覆盖）
   - `AlarmIntentManager`: 系统原生闹钟协议封装与容错处理
+  - `ChronotypeCalculator` + `LightGuidanceCalculator`: 时间型中点分类、晨光与数字日落建议
+  - `ChronotypeProfileEntity` + Room：单用户时间型档案持久化
   - `SleepViewModel` & `StateFlow`: 响应式状态管理
 
 ---

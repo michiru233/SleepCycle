@@ -1,4 +1,13 @@
-## 11. 本期任务 5：最终回归与交付证据 (2026-08-25)
+## 12. Neat-freak 知识收尾审计 (2026-08-25)
+- **代码：changed-and-verified**。v1.6.0 代码包含时间型模型/跨午夜中点、Room 单用户档案、ViewModel StateFlow、晨光/数字日落建议和系统闹钟入口；当前远端 HEAD 为 `2805cdd feat(chronotype): 增加时间型测评与光照提醒`。
+- **运行态：changed-and-verified（Release live surface）**。`gh release view v1.6.0` 显示非 draft、非 prerelease，Release URL 为 `https://github.com/michiru233/SleepCycle/releases/tag/v1.6.0`，资产为 `SleepCycle-v1.6.0.apk`；无独立服务或生产部署，服务端运行态 not-applicable。
+- **文档：changed-and-verified**。README 已对齐 v1.6.0 下载入口、时间型阈值、Room/光照组件、科学来源和权限限制；历史版本记录保留为历史，不再作为当前状态。
+- **规则：verified-current**。当前项目唯一生效规则为根目录 `AGENTS.md`，无同级/上级冲突规则；本次未修改规则文件。
+- **记忆：not-applicable**。未发现项目级可写记忆系统，未写入平台生成记忆。
+- **工作区：verified-current**。单一 `main` worktree，远端同步；未发现 PLAN/TODO/implementation-notes 或备份代码残留。
+- **清场候选：pending**。根目录 `SleepCycle-v1.4.0.apk`、`SleepCycle-v1.5.0.apk` 为历史 Release 本地副本，`SleepCycle-v1.6.0.apk` 为当前发布 APK 副本；均被 `.gitignore` 忽略且未删除，等待用户明确确认后再清场。
+- **遗留：out-of-scope**。未实现睡眠历史、睡眠债务、社会时差或双过程算法，符合本期范围；kapt 对 Kotlin 2.0 的降级警告仅为构建警告，未阻断测试/构建。
+
 - [x] **全量测试**：`./gradlew testDebugUnitTest` 输出 `BUILD SUCCESSFUL`；总 `@Test` 数 45（基线 35 + 新增 10），既有 `SleepCalculatorTest/SleepViewModelTest/UpdateCheckerTest/AlarmIntentManagerTest = 13/7/6/2`，无 skipped/ignored 测试。
 - [x] **反向验证**：临时将 `23:30→07:30` 中点断言改为 211 分钟，测试输出 `ChronotypeModelTest > midpointAcrossMidnightIsCorrect FAILED`、`5 tests completed, 1 failed`；恢复 210 分钟后同命令 `BUILD SUCCESSFUL`，错误未保留。
 - [x] **构建**：`./gradlew assembleDebug` 输出 `BUILD SUCCESSFUL`（38 actionable tasks）；仅有 native library strip 警告，APK 正常生成。
@@ -75,14 +84,12 @@
 - [x] **GitHub Release**：`gh release create v1.5.0 SleepCycle-v1.5.0.apk --title "v1.5.0 - 高效小睡与睡眠惰性提示" ...` 成功，返回 `https://github.com/michiru233/SleepCycle/releases/tag/v1.5.0`。
 - [x] **最终硬指标核验**：`gh release view v1.5.0` 显示标题、tag、URL 和附件 `asset: SleepCycle-v1.5.0.apk`；`git log origin/main -1 --oneline` 输出 `36c6e04 feat(nap): 新增高效小睡档位与睡眠惰性提示`；`git status --short --branch` 输出 `## main...origin/main`。
 
-## 8. Neat-freak 知识收尾审计 (2026-08-25)
-- **代码：changed-and-verified**。当前 `origin/main` 为 `c218361 feat(nap): 新增高效小睡档位与睡眠惰性提示`；小睡模型、ViewModel 状态、App 内 coffee nap 弹窗、系统闹钟复用和睡眠惰性卡片均有对应测试/构建证据。
-- **运行态：changed-and-verified（Release live surface）**。GitHub Release `v1.5.0` 可访问，附件 `SleepCycle-v1.5.0.apk`，大小 18194793 bytes；未配置独立服务或生产部署，因此服务端运行态不适用。
-- **文档：changed-and-verified**。README 已同步 v1.5.0 下载入口、小睡档位、Coffee nap、Brooks & Lack（2006）、NASA 约 26 分钟/约 34% 警觉度提升及个体差异提示。
-- **规则：verified-current**。项目唯一生效规则为根目录 `AGENTS.md`；本次未修改规则文件。
-- **记忆：not-applicable**。未发现项目级可写记忆系统；未写入平台生成记忆。
-- **工作区：verified-current**。`git status --short --branch` 为 `## main...origin/main`，仅一个 worktree，无会话计划/备份残留。
-- **发布提交差异：pending / 已知**。Release tag `v1.5.0` 当前指向 `36c6e04`，`origin/main` 指向 `c218361`；后者仅补入本文件的发布核验记录，代码与 README 改动内容一致；未移动已发布 tag。
-- **待清理候选（未删除，等待用户确认）**：根目录 `SleepCycle-v1.4.0.apk`（历史 Release 资产本地副本）和 `SleepCycle-v1.5.0.apk`（本次 Release 上传副本）。两者均未纳入 Git，删除属于清场动作，本次保留现场。
+## 8. Neat-freak 历史知识记录（v1.5.0，2026-08-25）
+- **历史代码记录**：v1.5.0 当时的 `c218361 feat(nap): 新增高效小睡档位与睡眠惰性提示` 包含小睡模型、ViewModel 状态、App 内 coffee nap 弹窗、系统闹钟复用和睡眠惰性卡片。
+- **历史运行态记录**：GitHub Release `v1.5.0` 当时可访问，附件 `SleepCycle-v1.5.0.apk`，大小 18194793 bytes；未配置独立服务或生产部署。
+- **历史文档记录**：README 当时已同步 v1.5.0 下载入口、小睡档位、Coffee nap、Brooks & Lack（2006）、NASA 约 26 分钟/约 34% 警觉度提升及个体差异提示。
+- **历史规则/记忆记录**：当时项目唯一生效规则为根目录 `AGENTS.md`，未发现项目级可写记忆系统；本记录不代表当前 v1.6.0 运行态。
+- **历史发布提交差异**：Release tag `v1.5.0` 当时指向 `36c6e04`，`origin/main` 当时指向 `c218361`；后者仅补入当时发布核验记录，未移动已发布 tag。
+- **历史清理候选**：根目录 `SleepCycle-v1.4.0.apk`、`SleepCycle-v1.5.0.apk` 是历史 Release 本地副本；当前清场候选以本文件顶部 v1.6.0 审计记录为准，未删除。
 
 ## 5. 本期任务 0：小睡与睡眠惰性功能开工回执 (2026-08-25)
