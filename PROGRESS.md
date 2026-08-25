@@ -8,7 +8,17 @@
 - **实现取舍**：为满足“实际主睡眠分钟数”可编辑，表单同时显示时间段估算和实际分钟输入；模型算法不散落在 Compose。
 - **限制**：当前无 adb 设备，真实 SQLite migration 未执行，详情见 `BLOCKED.md`；其余本地纯 JVM/编译验证继续执行。
 
-## 15. 本期最终回归与交付证据 (2026-08-26)
+## 16. 验收缺口补齐 (2026-08-26)
+- [x] 增加 `SleepRecordDraft` 和 `cancelSleepRecordEdit()`：编辑已有记录时保留快照，取消恢复原表单且不写仓库；新增 ViewModel 取消编辑断言。
+- [x] 将迁移 SQL 拆为可核验常量，测试直接断言 `sleep_record` / `sleep_settings` 的表名、字段、NOT NULL、主键和 `(1, 480)` 默认目标语句。
+- **下一步**：重新执行全量测试和 Debug 构建，更新 APK、提交、推送并更新 v1.7.0 Release 资产。
+
+## 17. 补充缺口最终验证 (2026-08-26)
+- [x] `SleepRecordViewModelTest` 新增取消编辑用例：编辑快照、字段修改、取消恢复原值且仓库不变。
+- [x] `SleepRecordStorageTest` 新增迁移 SQL 契约：逐项核验两张表、字段类型、NOT NULL、主键和默认 `(1, 480)`。
+- [x] `./gradlew testDebugUnitTest`：`BUILD SUCCESSFUL`，62 tests；既有文件仍 `13/7/6/2`。
+- [x] `./gradlew assembleDebug`：`BUILD SUCCESSFUL`（38 actionable tasks）；新 APK `SleepCycle-v1.7.0.apk` 为 18,642,817 bytes。
+
 - [x] `./gradlew testDebugUnitTest`：`BUILD SUCCESSFUL`，60 tests executed；无 skipped/ignored。
 - [x] 既有文件计数：`SleepCalculatorTest=13`、`SleepViewModelTest=7`、`UpdateCheckerTest=6`、`AlarmIntentManagerTest=2`。
 - [x] 反向验证红：临时将社会时差断言 `45` 改为 `46`，`SleepAnalysisTest` 输出 `7 tests completed, 1 failed`；恢复后同命令 `BUILD SUCCESSFUL`。

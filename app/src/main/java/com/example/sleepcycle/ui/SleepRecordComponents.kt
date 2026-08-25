@@ -62,6 +62,7 @@ fun SleepRecordSection(
     onPrimaryChanged: (Int) -> Unit,
     onNapChanged: (Int) -> Unit,
     onSave: () -> Unit,
+    onCancelEdit: () -> Unit,
     onDelete: (LocalDate) -> Unit,
     onEdit: (LocalDate) -> Unit,
     onTargetChanged: (Int) -> Unit,
@@ -110,6 +111,9 @@ fun SleepRecordSection(
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 Button(onClick = onSave, modifier = Modifier.weight(1f)) { Text(if (state.recordSaveState is SleepRecordSaveState.Saving) "保存中" else "保存记录") }
+                if (state.editingSleepRecord != null) {
+                    OutlinedButton(onClick = onCancelEdit, modifier = Modifier.weight(1f)) { Text("取消编辑") }
+                }
                 IconButton(onClick = { onDelete(state.recordDate) }) { Icon(Icons.Default.Delete, contentDescription = "删除记录") }
             }
             when (val saveState = state.recordSaveState) {

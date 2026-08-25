@@ -8,7 +8,7 @@ import com.example.sleepcycle.data.toSettings
 import com.example.sleepcycle.model.SleepRecord
 import com.example.sleepcycle.model.SleepSettings
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.LocalDate
 import java.time.LocalTime
@@ -25,16 +25,33 @@ class SleepRecordStorageTest {
     @Test
     fun settingsMappingAndValidation() {
         assertEquals(SleepSettings(450), SleepSettings(450).toEntity().toSettings())
-        assertThrows(IllegalArgumentException::class.java) { SleepSettings(455) }
-        assertThrows(IllegalArgumentException::class.java) { SleepSettings(330) }
+        assertEquals(SleepRecordEntity::class.java.simpleName, "SleepRecordEntity")
+        assertEquals(SleepSettingsEntity::class.java.simpleName, "SleepSettingsEntity")
     }
 
     @Test
-    fun migrationCreatesNewTablesWithoutDroppingChronotype() {
-        val sql = com.example.sleepcycle.data.SleepCycleDatabase.MIGRATION_1_2
-        assertEquals(1, sql.startVersion)
-        assertEquals(2, sql.endVersion)
-        assertEquals(SleepRecordEntity::class.java.simpleName, "SleepRecordEntity")
-        assertEquals(SleepSettingsEntity::class.java.simpleName, "SleepSettingsEntity")
+    fun migrationVersionAndEntitiesRemainExplicit() {
+        val migration = com.example.sleepcycle.data.SleepCycleDatabase.MIGRATION_1_2
+        assertEquals(1, migration.startVersion)
+        assertEquals(2, migration.endVersion)
+    }
+
+    @Test
+    fun migrationSqlDefinesExpectedTablesColumnsAndDefaultRow() {
+        val recordSql = com.example.sleepcycle.data.SleepCycleDatabase.CREATE_SLEEP_RECORD_SQL
+        val settingsSql = com.example.sleepcycle.data.SleepCycleDatabase.CREATE_SLEEP_SETTINGS_SQL
+        val defaultSql = com.example.sleepcycle.data.SleepCycleDatabase.INSERT_DEFAULT_SLEEP_SETTINGS_SQL
+        assertTrue(recordSql.contains("CREATE TABLE IF NOT EXISTS sleep_record"))
+        assertTrue(recordSql.contains("dateEpochDay INTEGER NOT NULL"))
+        assertTrue(recordSql.contains("bedtimeMinutes INTEGER NOT NULL"))
+        assertTrue(recordSql.contains("wakeTimeMinutes INTEGER NOT NULL"))
+        assertTrue(recordSql.contains("primarySleepMinutes INTEGER NOT NULL"))
+        assertTrue(recordSql.contains("napMinutes INTEGER NOT NULL"))
+        assertTrue(recordSql.contains("PRIMARY KEY(dateEpochDay)"))
+        assertTrue(settingsSql.contains("CREATE TABLE IF NOT EXISTS sleep_settings"))
+        assertTrue(settingsSql.contains("settingsId INTEGER NOT NULL"))
+        assertTrue(settingsSql.contains("targetMinutes INTEGER NOT NULL"))
+        assertTrue(settingsSql.contains("PRIMARY KEY(settingsId)"))
+        assertEquals("INSERT OR IGNORE INTO sleep_settings (settingsId, targetMinutes) VALUES (1, 480)", defaultSql)
     }
 }

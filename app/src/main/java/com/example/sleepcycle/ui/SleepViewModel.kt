@@ -105,8 +105,17 @@ data class SleepUiState(
     val recordWakeTime: LocalTime = LocalTime.of(7, 0),
     val recordPrimarySleepMinutes: Int = 480,
     val recordNapMinutes: Int = 0,
+    val editingSleepRecord: SleepRecordDraft? = null,
     val recordSaveState: SleepRecordSaveState = SleepRecordSaveState.Idle,
     val sleepDataError: String? = null
+)
+
+data class SleepRecordDraft(
+    val date: LocalDate,
+    val bedtime: LocalTime,
+    val wakeTime: LocalTime,
+    val primarySleepMinutes: Int,
+    val napMinutes: Int
 )
 
 sealed class SleepRecordSaveState {
@@ -201,10 +210,37 @@ class SleepViewModel(
             runCatching { sleepRecordRepository.getRecord(date) }
                 .onSuccess { record ->
                     if (record != null) _uiState.update {
-                        it.copy(recordDate = record.date, recordBedtime = record.bedtime, recordWakeTime = record.wakeTime, recordPrimarySleepMinutes = record.primarySleepMinutes, recordNapMinutes = record.napMinutes, recordSaveState = SleepRecordSaveState.Idle)
+                        it.copy(
+                            recordDate = record.date,
+                            recordBedtime = record.bedtime,
+                            recordWakeTime = record.wakeTime,
+                            recordPrimarySleepMinutes = record.primarySleepMinutes,
+                            recordNapMinutes = record.napMinutes,
+                            editingSleepRecord = SleepRecordDraft(record.date, record.bedtime, record.wakeTime, record.primarySleepMinutes, record.napMinutes),
+                            recordSaveState = SleepRecordSaveState.Idle
+                        )
                     }
                 }
                 .onFailure { error -> _uiState.update { it.copy(sleepDataError = error.message ?: "睡眠记录读取失败") } }
+        }
+    }
+
+    fun cancelSleepRecordEdit() {
+        val draft = _uiState.value.editingSleepRecord
+        _uiState.update { state ->
+            if (draft == null) {
+                state.copy(recordSaveState = SleepRecordSaveState.Idle)
+            } else {
+                state.copy(
+                    recordDate = draft.date,
+                    recordBedtime = draft.bedtime,
+                    recordWakeTime = draft.wakeTime,
+                    recordPrimarySleepMinutes = draft.primarySleepMinutes,
+                    recordNapMinutes = draft.napMinutes,
+                    editingSleepRecord = null,
+                    recordSaveState = SleepRecordSaveState.Idle
+                )
+            }
         }
     }
 
@@ -227,7 +263,7 @@ class SleepViewModel(
                 sleepRecordRepository.saveRecord(record)
                 sleepRecordRepository.loadRecords()
             }.onSuccess { records ->
-                _uiState.update { it.copy(recordSaveState = SleepRecordSaveState.Saved).withSleepData(records, it.sleepSettings) }
+                _uiState.update { it.copy(recordSaveState = SleepRecordSaveState.Saved).withSleepData(records, it.sleepSettings).copy(editingSleepRecord = null) }
             }.onFailure { error ->
                 _uiState.update { it.copy(recordSaveState = SleepRecordSaveState.Error(error.message ?: "睡眠记录保存失败"), sleepDataError = error.message) }
             }

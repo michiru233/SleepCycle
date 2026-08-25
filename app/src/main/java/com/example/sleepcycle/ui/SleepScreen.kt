@@ -186,6 +186,7 @@ fun SleepScreen(
                         onPrimaryChanged = { viewModel.updateSleepRecordForm(primarySleepMinutes = it) },
                         onNapChanged = { viewModel.updateSleepRecordForm(napMinutes = it) },
                         onSave = { viewModel.saveSleepRecord() },
+                        onCancelEdit = { viewModel.cancelSleepRecordEdit() },
                         onDelete = { viewModel.deleteSleepRecord(it) },
                         onEdit = { viewModel.editSleepRecord(it) },
                         onTargetChanged = { viewModel.saveSleepTarget(it) }

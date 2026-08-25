@@ -81,15 +81,15 @@ abstract class SleepCycleDatabase : RoomDatabase() {
     abstract fun sleepSettingsDao(): SleepSettingsDao
 
     companion object {
+        const val CREATE_SLEEP_RECORD_SQL = "CREATE TABLE IF NOT EXISTS sleep_record (dateEpochDay INTEGER NOT NULL, bedtimeMinutes INTEGER NOT NULL, wakeTimeMinutes INTEGER NOT NULL, primarySleepMinutes INTEGER NOT NULL, napMinutes INTEGER NOT NULL, PRIMARY KEY(dateEpochDay))"
+        const val CREATE_SLEEP_SETTINGS_SQL = "CREATE TABLE IF NOT EXISTS sleep_settings (settingsId INTEGER NOT NULL, targetMinutes INTEGER NOT NULL, PRIMARY KEY(settingsId))"
+        const val INSERT_DEFAULT_SLEEP_SETTINGS_SQL = "INSERT OR IGNORE INTO sleep_settings (settingsId, targetMinutes) VALUES (1, 480)"
+
         val MIGRATION_1_2: Migration = object : Migration(1, 2) {
             override fun migrate(database: SupportSQLiteDatabase) {
-                database.execSQL(
-                    "CREATE TABLE IF NOT EXISTS sleep_record (dateEpochDay INTEGER NOT NULL, bedtimeMinutes INTEGER NOT NULL, wakeTimeMinutes INTEGER NOT NULL, primarySleepMinutes INTEGER NOT NULL, napMinutes INTEGER NOT NULL, PRIMARY KEY(dateEpochDay))"
-                )
-                database.execSQL(
-                    "CREATE TABLE IF NOT EXISTS sleep_settings (settingsId INTEGER NOT NULL, targetMinutes INTEGER NOT NULL, PRIMARY KEY(settingsId))"
-                )
-                database.execSQL("INSERT OR IGNORE INTO sleep_settings (settingsId, targetMinutes) VALUES (1, 480)")
+                database.execSQL(CREATE_SLEEP_RECORD_SQL)
+                database.execSQL(CREATE_SLEEP_SETTINGS_SQL)
+                database.execSQL(INSERT_DEFAULT_SLEEP_SETTINGS_SQL)
             }
         }
     }

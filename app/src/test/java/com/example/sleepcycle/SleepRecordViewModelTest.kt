@@ -46,6 +46,24 @@ class SleepRecordViewModelTest {
     }
 
     @Test
+    fun cancelEditRestoresOriginalRecordDraftAndLeavesRepositoryUntouched() = runBlocking {
+        val original = SleepRecord(yesterday, LocalTime.of(23, 0), LocalTime.of(7, 0), 480, 20)
+        val repository = InMemorySleepRecordRepository(listOf(original))
+        val viewModel = viewModel(repository)
+        viewModel.editSleepRecord(yesterday)
+        viewModel.updateSleepRecordForm(bedtime = LocalTime.of(22, 0), primarySleepMinutes = 420, napMinutes = 0)
+        viewModel.cancelSleepRecordEdit()
+        val state = viewModel.uiState.value
+        assertEquals(original.date, state.recordDate)
+        assertEquals(original.bedtime, state.recordBedtime)
+        assertEquals(original.wakeTime, state.recordWakeTime)
+        assertEquals(original.primarySleepMinutes, state.recordPrimarySleepMinutes)
+        assertEquals(original.napMinutes, state.recordNapMinutes)
+        assertEquals(null, state.editingSleepRecord)
+        assertEquals(listOf(original), repository.loadRecords())
+    }
+
+    @Test
     fun deleteRemovesRecordAndRefreshesStats() {
         val record = SleepRecord(yesterday, LocalTime.of(23, 0), LocalTime.of(7, 0), 480)
         val repository = InMemorySleepRecordRepository(listOf(record))
