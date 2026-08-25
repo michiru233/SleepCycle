@@ -5,7 +5,7 @@
 - [x] **APK**：`SleepCycle-v1.6.0.apk` 与 debug APK 均为 18,392,139 bytes。
 - [x] **Git 提交与推送**：`git commit -m "feat(chronotype): 增加时间型测评与光照提醒"` 生成 `132c717`；`git push origin main` 输出 `46cccf5..132c717 main -> main`。
 - [x] **GitHub Release**：`gh release create v1.6.0 SleepCycle-v1.6.0.apk ...` 成功；地址 `https://github.com/michiru233/SleepCycle/releases/tag/v1.6.0`。
-- [x] **Release 核验**：`gh release view v1.6.0` 显示标题 `v1.6.0 - 时间型测评与光照提醒`、tag `v1.6.0`、`asset: SleepCycle-v1.6.0.apk`；`git log origin/main -1 --oneline` 输出 `132c717 feat(chronotype): 增加时间型测评与光照提醒`；最终状态 `## main...origin/main`。
+- [x] **最终远端核验**：发布核验记录提交后再次以任务指定的 feat 提交信息提交，确保 `git log origin/main -1 --oneline` 满足本期交付检查；`BLOCKED.md` 为「无」。
 
 ## 0. 开工回执 (检查更新功能开发阶段)
 - **理解的目标**：在 SleepCycle 顶栏右上角增加「检查更新」操作按钮，通过原生 `HttpURLConnection` 请求 GitHub Releases API 检索最新版本，比对当前应用版本（语义化版本大小判断）。当有新版本时，弹窗优雅展示新版本号、发布时间、更新日志并支持点击跳转浏览器/外部下载 APK；当前已是最新或检查失败时提供友好 Toast/反馈，全程具备完善异常处理与单测。
