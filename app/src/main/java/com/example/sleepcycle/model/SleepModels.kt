@@ -4,6 +4,51 @@ import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
 /**
+ * Short-rest presets backed by the in-app nap flow.
+ */
+enum class NapType(
+    val durationMinutes: Int,
+    val label: String,
+    val description: String,
+    val wakeUpTip: String,
+    val isCoffeeNap: Boolean = false
+) {
+    TEN_MINUTES(
+        durationMinutes = 10,
+        label = "10 分钟",
+        description = "快速提神，尽量减少醒后昏沉",
+        wakeUpTip = "醒来后接触晨光并做几分钟轻度活动，帮助恢复清醒。"
+    ),
+    TWENTY_MINUTES(
+        durationMinutes = 20,
+        label = "20 分钟",
+        description = "短时恢复专注力",
+        wakeUpTip = "醒来后先接触明亮光线，再做轻度活动，给大脑几分钟恢复时间。"
+    ),
+    COFFEE_NAP(
+        durationMinutes = 20,
+        label = "Coffee nap",
+        description = "先喝咖啡，再小睡 20 分钟",
+        wakeUpTip = "咖啡因通常需要一段时间起效；醒来后接触晨光并做轻度活动。",
+        isCoffeeNap = true
+    ),
+    ONE_CYCLE_90_MINUTES(
+        durationMinutes = 90,
+        label = "90 分钟（1 周期）",
+        description = "完整经历一个睡眠周期",
+        wakeUpTip = "醒来后预留缓冲时间，接触晨光并做轻度活动。"
+    )
+}
+
+data class NapAlarmRequest(
+    val napType: NapType,
+    val targetTime: LocalTime
+)
+
+const val SLEEP_INERTIA_GUIDANCE =
+    "醒后约 15–60 分钟认知可能未完全恢复。建议接触晨光并做轻度活动；个体差异，仅供参考。"
+
+/**
  * 睡眠质量与周期评估评级
  */
 enum class SleepQuality(val label: String, val description: String) {

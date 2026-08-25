@@ -13,6 +13,9 @@ import com.example.sleepcycle.data.SharedPreferencesSleepPreferencesRepository
 import com.example.sleepcycle.data.SleepPreferencesRepository
 import com.example.sleepcycle.model.SleepCalculator
 import com.example.sleepcycle.model.SleepRecommendation
+import com.example.sleepcycle.model.NapAlarmRequest
+import com.example.sleepcycle.model.NapType
+import com.example.sleepcycle.model.SLEEP_INERTIA_GUIDANCE
 import com.example.sleepcycle.update.ReleaseInfo
 import com.example.sleepcycle.update.UpdateCheckResult
 import com.example.sleepcycle.update.UpdateChecker
@@ -60,8 +63,16 @@ data class SleepUiState(
     val selectedTime: LocalTime = LocalTime.of(23, 0),
     val latencyMinutes: Int = SleepCalculator.DEFAULT_FALL_ASLEEP_LATENCY_MINUTES,
     val recommendations: List<SleepRecommendation> = emptyList(),
-    val updateUiState: UpdateUiState = UpdateUiState.Idle
+    val updateUiState: UpdateUiState = UpdateUiState.Idle,
+    val selectedNapType: NapType? = null,
+    val napAlarmRequest: NapAlarmRequest? = null,
+    val showCoffeeNapPrompt: Boolean = false,
+    val wakeUpGuidance: String? = null
 )
+
+sealed class NapEvent {
+    data class CoffeeNapPrompt(val napType: NapType) : NapEvent()
+}
 
 class SleepViewModel(
     private val preferencesRepository: SleepPreferencesRepository = InMemorySleepPreferencesRepository(),
@@ -82,6 +93,9 @@ class SleepViewModel(
 
     private val _updateEvents = MutableSharedFlow<UpdateEvent>()
     val updateEvents: SharedFlow<UpdateEvent> = _updateEvents.asSharedFlow()
+
+    private val _napEvents = MutableSharedFlow<NapEvent>()
+    val napEvents: SharedFlow<NapEvent> = _napEvents.asSharedFlow()
 
     init {
         recalculate()
@@ -118,6 +132,68 @@ class SleepViewModel(
         if (_uiState.value.selectedMode == CalculationMode.SLEEP_NOW) {
             _uiState.update { it.copy(selectedTime = LocalTime.now()) }
             recalculate()
+        }
+    }
+
+    fun selectNapType(napType: NapType) {
+        _uiState.update {
+            it.copy(
+                selectedNapType = napType,
+                napAlarmRequest = null,
+                showCoffeeNapPrompt = false,
+                wakeUpGuidance = null
+            )
+        }
+        if (napType.isCoffeeNap) {
+            _uiState.update { it.copy(showCoffeeNapPrompt = true) }
+            scope.launch { _napEvents.emit(NapEvent.CoffeeNapPrompt(napType)) }
+        } else {
+            prepareNapAlarm(napType)
+        }
+    }
+
+    fun confirmCoffeeNap() {
+        val napType = _uiState.value.selectedNapType
+        if (napType?.isCoffeeNap == true) {
+            _uiState.update { it.copy(showCoffeeNapPrompt = false) }
+            prepareNapAlarm(napType)
+        }
+    }
+
+    fun dismissCoffeeNapPrompt() {
+        _uiState.update { it.copy(showCoffeeNapPrompt = false, selectedNapType = null) }
+    }
+
+    fun clearNapAlarmRequest() {
+        _uiState.update { it.copy(napAlarmRequest = null) }
+    }
+
+    fun markNapAlarmSet() {
+        val napType = _uiState.value.selectedNapType ?: return
+        _uiState.update {
+            it.copy(
+                napAlarmRequest = null,
+                wakeUpGuidance = if (napType == NapType.TEN_MINUTES || napType == NapType.TWENTY_MINUTES || napType == NapType.COFFEE_NAP) {
+                    SLEEP_INERTIA_GUIDANCE
+                } else {
+                    napType.wakeUpTip
+                }
+            )
+        }
+    }
+
+    fun showSleepInertiaGuidance() {
+        _uiState.update { it.copy(wakeUpGuidance = SLEEP_INERTIA_GUIDANCE) }
+    }
+
+    private fun prepareNapAlarm(napType: NapType) {
+        val targetTime = LocalTime.now().plusMinutes(napType.durationMinutes.toLong())
+        _uiState.update {
+            it.copy(
+                selectedNapType = napType,
+                napAlarmRequest = NapAlarmRequest(napType, targetTime),
+                showCoffeeNapPrompt = false
+            )
         }
     }
 
@@ -174,7 +250,7 @@ class SleepViewModel(
     }
 
     companion object {
-        const val CURRENT_APP_VERSION = "1.3.0"
+        const val CURRENT_APP_VERSION = "1.5.0"
 
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
