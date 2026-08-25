@@ -4,27 +4,40 @@
 - [x] **任务 2 纯模型**：新增 14 天估算睡眠缺口、午睡抵扣、工作日/休息日环形中点社会时差，并限制最近 14 天与每组至少 2 条。
 - [x] **任务 3 双过程**：新增集中参数的指数 Process S、24 小时 Process C、综合睡眠倾向和 48 个 30 分钟点；时间型睡眠中点作为警觉低谷相位，无档案使用默认相位。
 - [x] **任务 4 UI/ViewModel**：SleepScreen 新增手动日期/时间/实际主睡眠/午睡记录、目标滑块、统计卡、社会时差状态和 Canvas 曲线；保存后重新读取，异常有明确状态。
-- [x] **新增测试**：`SleepRecordStorageTest` 3、`SleepAnalysisTest` 7、`SleepRecordViewModelTest` 5，聚焦测试已全绿；既有四文件仍为 `13/7/6/2`。
+- [x] **新增测试**：`SleepRecordStorageTest` 4、`SleepAnalysisTest` 7、`SleepRecordViewModelTest` 6，聚焦测试已全绿；既有四文件仍为 `13/7/6/2`。
 - **实现取舍**：为满足“实际主睡眠分钟数”可编辑，表单同时显示时间段估算和实际分钟输入；模型算法不散落在 Compose。
 - **限制**：当前无 adb 设备，真实 SQLite migration 未执行，详情见 `BLOCKED.md`；其余本地纯 JVM/编译验证继续执行。
 
 ## 16. 验收缺口补齐 (2026-08-26)
 - [x] 增加 `SleepRecordDraft` 和 `cancelSleepRecordEdit()`：编辑已有记录时保留快照，取消恢复原表单且不写仓库；新增 ViewModel 取消编辑断言。
 - [x] 将迁移 SQL 拆为可核验常量，测试直接断言 `sleep_record` / `sleep_settings` 的表名、字段、NOT NULL、主键和 `(1, 480)` 默认目标语句。
-- **下一步**：重新执行全量测试和 Debug 构建，更新 APK、提交、推送并更新 v1.7.0 Release 资产。
+- [x] 补充验证：62 个测试全绿，`assembleDebug` 全绿，APK 已更新并推送；v1.7.0 Release 资产已覆盖。
 
 ## 17. 补充缺口最终验证 (2026-08-26)
 - [x] `SleepRecordViewModelTest` 新增取消编辑用例：编辑快照、字段修改、取消恢复原值且仓库不变。
 - [x] `SleepRecordStorageTest` 新增迁移 SQL 契约：逐项核验两张表、字段类型、NOT NULL、主键和默认 `(1, 480)`。
 - [x] `./gradlew testDebugUnitTest`：`BUILD SUCCESSFUL`，62 tests；既有文件仍 `13/7/6/2`。
+- [x] `./gradlew testDebugUnitTest`：`BUILD SUCCESSFUL`，62 tests；既有文件仍 `13/7/6/2`。
 - [x] `./gradlew assembleDebug`：`BUILD SUCCESSFUL`（38 actionable tasks）；新 APK `SleepCycle-v1.7.0.apk` 为 18,642,817 bytes。
 
+## 18. Neat-freak 知识收尾审计 (2026-08-26)
+- **代码：changed-and-verified**。v1.7.0 当前代码包含手动睡眠记录、睡眠目标、14 天缺口、社会时差、双过程曲线、编辑取消快照和 Room version 2 显式迁移；`origin/main` 为 `6ca44e3 feat(sleep-model): 增加睡眠记录与双过程分析`。
+- **运行态：changed-and-verified**。GitHub Release `v1.7.0` 为非 draft、非 prerelease，URL 为 `https://github.com/michiru233/SleepCycle/releases/tag/v1.7.0`，资产为 `SleepCycle-v1.7.0.apk`；无独立服务，Android 本地应用运行态以 Release APK 为 live surface。
+- **文档：changed-and-verified**。README 当前下载入口为 v1.7.0，功能定义、估算边界、Borbély 1982、Van Dongen 2003 和 Roenneberg/MCTQ 来源与代码一致。
+- **规则：verified-current**。项目现役规则为根目录 `AGENTS.md`；本审计未修改规则，规则要求的测试、构建、提交、推送和 Release 流程均已执行。
+- **记忆：not-applicable**。未发现项目级可写记忆系统；未写入平台生成记忆。
+- **工作区：verified-current**。单一 `main` worktree，`HEAD` 与 `origin/main` 同步，工作区无未提交变更；未发现 PLAN/TODO/implementation-notes 或备份代码残留。
+- **清场候选：pending**。根目录 `SleepCycle-v1.4.0.apk`、`SleepCycle-v1.5.0.apk`、`SleepCycle-v1.6.0.apk` 是历史 Release 本地副本，当前未删除，等待用户明确确认；本次不执行破坏性清理。
+- **遗留：pending**。本机无可用 adb 设备，无法执行真实 SQLite Room migration；`BLOCKED.md` 已记录，当前以 SQL/表结构契约测试、Room 编译和 Factory migration 接线作为替代证据。
+
+## 历史 v1.7.0 首次交付证据（补充验收前，2026-08-26）
 - [x] `./gradlew testDebugUnitTest`：`BUILD SUCCESSFUL`，60 tests executed；无 skipped/ignored。
 - [x] 既有文件计数：`SleepCalculatorTest=13`、`SleepViewModelTest=7`、`UpdateCheckerTest=6`、`AlarmIntentManagerTest=2`。
 - [x] 反向验证红：临时将社会时差断言 `45` 改为 `46`，`SleepAnalysisTest` 输出 `7 tests completed, 1 failed`；恢复后同命令 `BUILD SUCCESSFUL`。
 - [x] `./gradlew assembleDebug`：`BUILD SUCCESSFUL`（38 actionable tasks）；APK `SleepCycle-v1.7.0.apk` 已复制，大小 18,457,679 bytes。
 - [ ] 真实 Room SQLite migration 仍受本机无 adb 设备限制，已如实记录在 `BLOCKED.md`。
-- **基线核验**：`./gradlew testDebugUnitTest` 输出 `BUILD SUCCESSFUL`（27 actionable tasks）；`./gradlew assembleDebug` 输出 `BUILD SUCCESSFUL`（38 actionable tasks）。
+
+## 历史 v1.6.0 收尾记录
 - **当前状态**：工作区干净且 `main...origin/main` 同步；远端 HEAD 为 `12126f9 feat(chronotype): 增加时间型测评与光照提醒`；版本为 `versionCode 8 / versionName 1.6.0`。
 - **目标**：在保留 ChronotypeProfile 数据的前提下，增加手动睡眠记录、睡眠目标、估算睡眠缺口、社会时差和 Borbély 双过程模型，并接入现有 SleepScreen。
 - **执行顺序**：数据模型/Room version 2 与迁移 -> 纯 Kotlin 缺口/社会时差计算 -> 双过程模型 -> Repository/ViewModel/UI -> README、回归、反向验证、版本与发布。
