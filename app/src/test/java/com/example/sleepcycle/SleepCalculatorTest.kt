@@ -2,6 +2,7 @@ package com.example.sleepcycle
 
 import com.example.sleepcycle.model.SleepCalculator
 import com.example.sleepcycle.model.SleepQuality
+import com.example.sleepcycle.model.SleepRecommendation
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -157,5 +158,57 @@ class SleepCalculatorTest {
 
         val rec4 = results.find { it.cycleCount == 4 }!!
         assertEquals("6小时", rec4.totalHoursText)
+    }
+
+    @Test
+    fun wakeWindowText_standardCase_isTargetMinus15ToPlus15() {
+        // 23:00 入睡、默认潜伏期 14 分钟 -> 实际入睡 23:14 + 450min = 06:44
+        // 窗口: 06:44 - 15min = 06:29 到 06:44 + 15min = 06:59
+        val bedtime = LocalTime.of(23, 0)
+        val results = SleepCalculator.calculateWakeUpTimes(bedtime)
+        val rec5 = results.find { it.cycleCount == 5 }!!
+
+        assertEquals(LocalTime.of(6, 44), rec5.targetTime)
+        assertEquals("06:29–06:59", rec5.wakeWindowText)
+    }
+
+    @Test
+    fun wakeWindowText_customLatency_target0650_is0635To0705() {
+        // 23:00 入睡、潜伏期 20 分钟 -> 实际入睡 23:20 + 450min = 06:50
+        // 窗口: 06:50 - 15min = 06:35 到 06:50 + 15min = 07:05 (跨小时不跨天)
+        val bedtime = LocalTime.of(23, 0)
+        val results = SleepCalculator.calculateWakeUpTimes(bedtime, latencyMinutes = 20)
+        val rec5 = results.find { it.cycleCount == 5 }!!
+
+        assertEquals(LocalTime.of(6, 50), rec5.targetTime)
+        assertEquals("06:35–07:05", rec5.wakeWindowText)
+    }
+
+    @Test
+    fun wakeWindowText_crossDayNight_boundaryWrapsPastMidnight() {
+        // 目标 00:06 ± 15min -> 00:06 - 15min = 23:51 (前一日) 到 00:06 + 15min = 00:21
+        val recommendation = SleepRecommendation(
+            cycleCount = 1,
+            targetTime = LocalTime.of(0, 6),
+            totalMinutes = 90,
+            quality = SleepQuality.NAP,
+            isRecommended = false
+        )
+        assertEquals("23:51–00:21", recommendation.wakeWindowText)
+    }
+
+    @Test
+    fun wakeWindowText_doesNotMutateExistingFields() {
+        // 验证 wakeWindowText 的加入不影响既有字段与 formattedTargetTime
+        val bedtime = LocalTime.of(23, 0)
+        val results = SleepCalculator.calculateWakeUpTimes(bedtime)
+        val rec5 = results.find { it.cycleCount == 5 }!!
+
+        assertEquals(5, rec5.cycleCount)
+        assertTrue(rec5.isRecommended)
+        assertEquals(LocalTime.of(6, 44), rec5.targetTime)
+        assertEquals("06:44", rec5.formattedTargetTime)
+        assertEquals("7小时30分", rec5.totalHoursText)
+        assertEquals("06:29–06:59", rec5.wakeWindowText)
     }
 }

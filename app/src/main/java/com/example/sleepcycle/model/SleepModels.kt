@@ -40,4 +40,18 @@ data class SleepRecommendation(
 
     val formattedTargetTime: String
         get() = targetTime.format(DateTimeFormatter.ofPattern("HH:mm"))
+
+    /**
+     * 最佳唤醒窗口 (目标时间前 15 分钟 到 后 15 分钟, 宽 30 分钟)
+     *
+     * 用于弱化单点闹钟的不确定性：真实睡眠周期在 80~100 分钟间波动、入睡潜伏期因人而异，
+     * 单个精确钟点并不科学，窗口仅作提示与行为参考。跨天自动翻转 (LocalTime 自动取模)。
+     */
+    val wakeWindowText: String
+        get() {
+            val start = targetTime.minusMinutes(15)
+            val end = targetTime.plusMinutes(15)
+            val formatter = DateTimeFormatter.ofPattern("HH:mm")
+            return "${start.format(formatter)}–${end.format(formatter)}"
+        }
 }
