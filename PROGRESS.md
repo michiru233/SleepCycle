@@ -1,5 +1,5 @@
 ## 12. Neat-freak 知识收尾审计 (2026-08-25)
-- **代码：changed-and-verified**。v1.6.0 代码包含时间型模型/跨午夜中点、Room 单用户档案、ViewModel StateFlow、晨光/数字日落建议和系统闹钟入口；当前远端 HEAD 为 `2805cdd feat(chronotype): 增加时间型测评与光照提醒`。
+- **代码：changed-and-verified**。v1.6.0 代码包含时间型模型/跨午夜中点、Room 单用户档案、ViewModel StateFlow、晨光/数字日落建议和系统闹钟入口；当前远端 HEAD 为 `d0c4035 feat(chronotype): 增加时间型测评与光照提醒`。
 - **运行态：changed-and-verified（Release live surface）**。`gh release view v1.6.0` 显示非 draft、非 prerelease，Release URL 为 `https://github.com/michiru233/SleepCycle/releases/tag/v1.6.0`，资产为 `SleepCycle-v1.6.0.apk`；无独立服务或生产部署，服务端运行态 not-applicable。
 - **文档：changed-and-verified**。README 已对齐 v1.6.0 下载入口、时间型阈值、Room/光照组件、科学来源和权限限制；历史版本记录保留为历史，不再作为当前状态。
 - **规则：verified-current**。当前项目唯一生效规则为根目录 `AGENTS.md`，无同级/上级冲突规则；本次未修改规则文件。
