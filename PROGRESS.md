@@ -1,4 +1,9 @@
-# 进度记录 (PROGRESS.md)
+## 11. 本期任务 5：最终回归与交付证据 (2026-08-25)
+- [x] **全量测试**：`./gradlew testDebugUnitTest` 输出 `BUILD SUCCESSFUL`；总 `@Test` 数 45（基线 35 + 新增 10），既有 `SleepCalculatorTest/SleepViewModelTest/UpdateCheckerTest/AlarmIntentManagerTest = 13/7/6/2`，无 skipped/ignored 测试。
+- [x] **反向验证**：临时将 `23:30→07:30` 中点断言改为 211 分钟，测试输出 `ChronotypeModelTest > midpointAcrossMidnightIsCorrect FAILED`、`5 tests completed, 1 failed`；恢复 210 分钟后同命令 `BUILD SUCCESSFUL`，错误未保留。
+- [x] **构建**：`./gradlew assembleDebug` 输出 `BUILD SUCCESSFUL`（38 actionable tasks）；仅有 native library strip 警告，APK 正常生成。
+- [x] **APK**：`SleepCycle-v1.6.0.apk` 与 debug APK 均为 18,392,139 bytes。
+- **待执行**：Git commit/push 与 `gh release create v1.6.0`，完成后补充实际输出；`BLOCKED.md` 当前为「无」。
 
 ## 0. 开工回执 (检查更新功能开发阶段)
 - **理解的目标**：在 SleepCycle 顶栏右上角增加「检查更新」操作按钮，通过原生 `HttpURLConnection` 请求 GitHub Releases API 检索最新版本，比对当前应用版本（语义化版本大小判断）。当有新版本时，弹窗优雅展示新版本号、发布时间、更新日志并支持点击跳转浏览器/外部下载 APK；当前已是最新或检查失败时提供友好 Toast/反馈，全程具备完善异常处理与单测。

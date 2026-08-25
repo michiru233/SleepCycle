@@ -11,6 +11,15 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.sleepcycle.data.InMemorySleepPreferencesRepository
 import com.example.sleepcycle.data.SharedPreferencesSleepPreferencesRepository
 import com.example.sleepcycle.data.SleepPreferencesRepository
+import com.example.sleepcycle.data.ChronotypeProfileRepository
+import com.example.sleepcycle.data.InMemoryChronotypeProfileRepository
+import com.example.sleepcycle.data.RoomChronotypeProfileRepository
+import com.example.sleepcycle.data.SleepCycleDatabase
+import com.example.sleepcycle.model.ChronotypeAnswers
+import com.example.sleepcycle.model.ChronotypeCalculator
+import com.example.sleepcycle.model.ChronotypeProfile
+import com.example.sleepcycle.model.LightGuidance
+import com.example.sleepcycle.model.LightGuidanceCalculator
 import com.example.sleepcycle.model.SleepCalculator
 import com.example.sleepcycle.model.SleepRecommendation
 import com.example.sleepcycle.model.NapAlarmRequest
@@ -20,6 +29,7 @@ import com.example.sleepcycle.update.ReleaseInfo
 import com.example.sleepcycle.update.UpdateCheckResult
 import com.example.sleepcycle.update.UpdateChecker
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -67,8 +77,22 @@ data class SleepUiState(
     val selectedNapType: NapType? = null,
     val napAlarmRequest: NapAlarmRequest? = null,
     val showCoffeeNapPrompt: Boolean = false,
-    val wakeUpGuidance: String? = null
+    val wakeUpGuidance: String? = null,
+    val chronotypeProfile: ChronotypeProfile? = null,
+    val chronotypeAnswers: ChronotypeAnswers = ChronotypeAnswers(null, null, null, null, null, null, null),
+    val isChronotypeEditing: Boolean = false,
+    val chronotypeSaveState: ChronotypeSaveState = ChronotypeSaveState.Idle,
+    val morningLightGuidance: LightGuidance.MorningLight? = null,
+    val digitalSunsetGuidance: LightGuidance.DigitalSunset? = null
 )
+
+sealed class ChronotypeSaveState {
+    data object Idle : ChronotypeSaveState()
+    data object Loading : ChronotypeSaveState()
+    data object Saving : ChronotypeSaveState()
+    data object Saved : ChronotypeSaveState()
+    data class Error(val message: String) : ChronotypeSaveState()
+}
 
 sealed class NapEvent {
     data class CoffeeNapPrompt(val napType: NapType) : NapEvent()
@@ -78,6 +102,7 @@ class SleepViewModel(
     private val preferencesRepository: SleepPreferencesRepository = InMemorySleepPreferencesRepository(),
     private val updateChecker: UpdateChecker = UpdateChecker(),
     private val appVersionName: String = CURRENT_APP_VERSION,
+    private val chronotypeRepository: ChronotypeProfileRepository = InMemoryChronotypeProfileRepository(),
     private val externalScope: CoroutineScope? = null
 ) : ViewModel() {
 
@@ -99,8 +124,67 @@ class SleepViewModel(
 
     init {
         recalculate()
+        loadChronotype()
     }
 
+    private fun loadChronotype() {
+        _uiState.update { it.copy(chronotypeSaveState = ChronotypeSaveState.Loading) }
+        scope.launch(Dispatchers.Unconfined) {
+            runCatching { chronotypeRepository.load() }
+                .onSuccess { profile ->
+                    _uiState.update {
+                        it.copy(
+                            chronotypeProfile = profile,
+                            chronotypeAnswers = profile?.answers ?: it.chronotypeAnswers,
+                            chronotypeSaveState = ChronotypeSaveState.Idle,
+                            morningLightGuidance = profile?.answers?.workdayWakeTime?.let { wake -> LightGuidanceCalculator.morningLight(wake, profile) } ?: it.morningLightGuidance,
+                            digitalSunsetGuidance = profile?.answers?.workdaySleepTime?.let { sleep -> LightGuidanceCalculator.digitalSunset(sleep, profile) } ?: it.digitalSunsetGuidance
+                        )
+                    }
+                }
+                .onFailure { error -> _uiState.update { it.copy(chronotypeSaveState = ChronotypeSaveState.Error(error.message ?: "时间型档案读取失败")) } }
+        }
+    }
+
+    fun beginChronotypeEdit() {
+        _uiState.update { it.copy(isChronotypeEditing = true, chronotypeSaveState = ChronotypeSaveState.Idle) }
+    }
+
+    fun cancelChronotypeEdit() {
+        _uiState.update {
+            it.copy(
+                isChronotypeEditing = false,
+                chronotypeAnswers = it.chronotypeProfile?.answers ?: ChronotypeAnswers(null, null, null, null, null, null, null),
+                chronotypeSaveState = ChronotypeSaveState.Idle
+            )
+        }
+    }
+
+    fun updateChronotypeAnswers(answers: ChronotypeAnswers) {
+        _uiState.update { it.copy(chronotypeAnswers = answers) }
+    }
+
+    fun saveChronotype() {
+        val answers = _uiState.value.chronotypeAnswers
+        val profile = ChronotypeCalculator.calculate(answers)
+        _uiState.update { it.copy(chronotypeSaveState = ChronotypeSaveState.Saving) }
+        scope.launch(Dispatchers.Unconfined) {
+            runCatching { chronotypeRepository.save(profile) }
+                .onSuccess {
+                    _uiState.update {
+                        it.copy(
+                            chronotypeProfile = profile,
+                            chronotypeAnswers = profile.answers,
+                            isChronotypeEditing = false,
+                            chronotypeSaveState = ChronotypeSaveState.Saved,
+                            morningLightGuidance = profile.answers.workdayWakeTime?.let { wake -> LightGuidanceCalculator.morningLight(wake, profile) },
+                            digitalSunsetGuidance = profile.answers.workdaySleepTime?.let { sleep -> LightGuidanceCalculator.digitalSunset(sleep, profile) }
+                        )
+                    }
+                }
+                .onFailure { error -> _uiState.update { it.copy(chronotypeSaveState = ChronotypeSaveState.Error(error.message ?: "时间型档案保存失败")) } }
+        }
+    }
     fun onModeSelected(mode: CalculationMode) {
         _uiState.update { current ->
             val defaultTime = when (mode) {
@@ -146,7 +230,7 @@ class SleepViewModel(
         }
         if (napType.isCoffeeNap) {
             _uiState.update { it.copy(showCoffeeNapPrompt = true) }
-            scope.launch { _napEvents.emit(NapEvent.CoffeeNapPrompt(napType)) }
+            scope.launch(Dispatchers.Unconfined) { _napEvents.emit(NapEvent.CoffeeNapPrompt(napType)) }
         } else {
             prepareNapAlarm(napType)
         }
@@ -207,7 +291,7 @@ class SleepViewModel(
 
         _uiState.update { it.copy(updateUiState = UpdateUiState.Checking) }
 
-        scope.launch {
+        scope.launch(Dispatchers.Unconfined) {
             when (val result = updateChecker.checkForUpdate(appVersionName)) {
                 is UpdateCheckResult.HasUpdate -> {
                     _uiState.update { it.copy(updateUiState = UpdateUiState.HasUpdate(result.releaseInfo)) }
@@ -245,17 +329,37 @@ class SleepViewModel(
                     SleepCalculator.calculateBedtimes(state.selectedTime, state.latencyMinutes)
                 }
             }
-            state.copy(recommendations = results)
+            state.copy(
+                recommendations = results,
+                morningLightGuidance = state.chronotypeProfile?.answers?.workdayWakeTime?.let { wake ->
+                    LightGuidanceCalculator.morningLight(wake, state.chronotypeProfile)
+                } ?: when (state.selectedMode) {
+                    CalculationMode.PLAN_WAKEUP -> LightGuidanceCalculator.morningLight(state.selectedTime)
+                    else -> LightGuidanceCalculator.morningLight(LocalTime.now())
+                },
+                digitalSunsetGuidance = state.chronotypeProfile?.answers?.workdaySleepTime?.let { sleep ->
+                    LightGuidanceCalculator.digitalSunset(sleep, state.chronotypeProfile)
+                } ?: when (state.selectedMode) {
+                    CalculationMode.PLAN_BEDTIME -> LightGuidanceCalculator.digitalSunset(state.selectedTime)
+                    else -> LightGuidanceCalculator.digitalSunset(LocalTime.of(23, 0))
+                }
+            )
         }
     }
 
     companion object {
-        const val CURRENT_APP_VERSION = "1.5.0"
+        const val CURRENT_APP_VERSION = "1.6.0"
 
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 val application = this[APPLICATION_KEY] as Application
                 val repository = SharedPreferencesSleepPreferencesRepository.create(application)
+                val database = androidx.room.Room.databaseBuilder(
+                    application,
+                    SleepCycleDatabase::class.java,
+                    "sleep_cycle.db"
+                ).build()
+                val chronotypeRepository = RoomChronotypeProfileRepository(database.chronotypeProfileDao())
                 val versionName = try {
                     val pInfo = application.packageManager.getPackageInfo(application.packageName, 0)
                     pInfo.versionName ?: CURRENT_APP_VERSION
@@ -265,7 +369,8 @@ class SleepViewModel(
                 SleepViewModel(
                     preferencesRepository = repository,
                     updateChecker = UpdateChecker(),
-                    appVersionName = versionName
+                    appVersionName = versionName,
+                    chronotypeRepository = chronotypeRepository
                 )
             }
         }

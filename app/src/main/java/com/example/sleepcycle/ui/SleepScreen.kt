@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.NightsStay
 import androidx.compose.material.icons.filled.SystemUpdateAlt
 import androidx.compose.material.icons.filled.WbSunny
+import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -173,6 +174,32 @@ fun SleepScreen(
                     NapPresetCard(
                         selectedNapType = uiState.selectedNapType,
                         onNapSelected = { viewModel.selectNapType(it) }
+                    )
+                }
+
+                item {
+                    ChronotypeCard(
+                        profile = uiState.chronotypeProfile,
+                        answers = uiState.chronotypeAnswers,
+                        isEditing = uiState.isChronotypeEditing,
+                        saveState = uiState.chronotypeSaveState,
+                        onEdit = { viewModel.beginChronotypeEdit() },
+                        onCancel = { viewModel.cancelChronotypeEdit() },
+                        onAnswersChanged = { viewModel.updateChronotypeAnswers(it) },
+                        onSave = { viewModel.saveChronotype() }
+                    )
+                }
+
+                item {
+                    LightGuidanceCards(
+                        morning = uiState.morningLightGuidance,
+                        sunset = uiState.digitalSunsetGuidance,
+                        onMorningAlarm = { guidance ->
+                            AlarmIntentManager.setAlarm(context, guidance.targetTime, "SleepCycle 晨间户外光提醒")
+                        },
+                        onSunsetAlarm = { guidance ->
+                            AlarmIntentManager.setAlarm(context, guidance.targetTime, "SleepCycle 数字日落提醒")
+                        }
                     )
                 }
 
