@@ -13,9 +13,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.NightsStay
 import androidx.compose.material.icons.filled.SystemUpdateAlt
+import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -27,6 +29,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.sleepcycle.alarm.AlarmIntentManager
+import com.example.sleepcycle.model.NapType
 import com.example.sleepcycle.ui.theme.LocalSleepGradients
 import kotlinx.coroutines.flow.collectLatest
 
@@ -65,6 +68,20 @@ fun SleepScreen(
                 viewModel.dismissUpdateDialog()
             }
         )
+    }
+
+    if (uiState.showCoffeeNapPrompt) {
+        CoffeeNapDialog(
+            onConfirm = { viewModel.confirmCoffeeNap() },
+            onDismiss = { viewModel.dismissCoffeeNapPrompt() }
+        )
+    }
+
+    LaunchedEffect(uiState.napAlarmRequest) {
+        val request = uiState.napAlarmRequest ?: return@LaunchedEffect
+        val message = "SleepCycle 小睡提醒 (${request.napType.label})"
+        AlarmIntentManager.setAlarm(context, request.targetTime, message)
+        viewModel.markNapAlarmSet()
     }
 
     Box(
@@ -152,6 +169,13 @@ fun SleepScreen(
                     )
                 }
 
+                item {
+                    NapPresetCard(
+                        selectedNapType = uiState.selectedNapType,
+                        onNapSelected = { viewModel.selectNapType(it) }
+                    )
+                }
+
                 // 2. 时间选择卡片
                 item {
                     ModernTimeSelectionCard(
@@ -207,8 +231,15 @@ fun SleepScreen(
                                 else -> "SleepCycle 浅睡智能唤醒 (${rec.cycleCount}个周期)"
                             }
                             AlarmIntentManager.setAlarm(context, rec.targetTime, message)
+                            viewModel.showSleepInertiaGuidance()
                         }
                     )
+                }
+
+                item {
+                    uiState.wakeUpGuidance?.let { guidance ->
+                        WakeUpGuidanceCard(text = guidance)
+                    }
                 }
 
                 // 5. 科学知识卡片与底部边距
@@ -216,6 +247,139 @@ fun SleepScreen(
                     ModernScientificNoteCard()
                     Spacer(modifier = Modifier.height(28.dp))
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun NapPresetCard(
+    selectedNapType: NapType?,
+    onNapSelected: (NapType) -> Unit
+) {
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.82f)
+        ),
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Alarm,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(18.dp)
+                )
+                Text(
+                    text = "小睡模式",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "应用内设置系统闹钟",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                NapType.entries.forEach { napType ->
+                    FilterChip(
+                        selected = selectedNapType == napType,
+                        onClick = { onNapSelected(napType) },
+                        label = {
+                            Text(
+                                text = when (napType) {
+                                    NapType.COFFEE_NAP -> "咖啡 nap"
+                                    else -> napType.label
+                                },
+                                maxLines = 1
+                            )
+                        },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+            selectedNapType?.let { napType ->
+                Text(
+                    text = napType.description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CoffeeNapDialog(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = {
+            Icon(
+                imageVector = Icons.Default.Alarm,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary
+            )
+        },
+        title = { Text("Coffee nap 引导") },
+        text = {
+            Text("先喝咖啡，20 分钟后咖啡因起效时刚好醒来。咖啡因敏感或临近夜间时请谨慎；个体差异，仅供参考。")
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm) { Text("喝咖啡并设 20 分钟") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("取消") }
+        }
+    )
+}
+
+@Composable
+private fun WakeUpGuidanceCard(text: String) {
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.72f)
+        ),
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(14.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.Top
+        ) {
+            Icon(
+                imageVector = Icons.Default.WbSunny,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                modifier = Modifier.size(20.dp)
+            )
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = "醒后缓冲提示",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+                Text(
+                    text = text,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
             }
         }
     }
@@ -281,12 +445,16 @@ fun ModernScientificNoteCard(modifier: Modifier = Modifier) {
                     content = "人类正常睡眠由 90 分钟的周期循环构成（浅睡、深睡与快速眼动期）。在周期交界处的浅睡期唤醒能让人感到神清气爽。"
                 )
                 ScienceTipItem(
-                    title = "高效午睡与能量小憩",
-                    content = "1个周期（90分钟）是完美的午睡/高效小憩时长，能完整体验一次睡眠周期且醒来不昏沉；2个周期（3小时）适合深度补能。"
+                    title = "高效午睡：10 或 20 分钟",
+                    content = "Brooks & Lack（2006）研究发现，10 分钟小睡的提神性价比较高；约 20 分钟可用于短时恢复专注。个体差异，仅供参考。"
                 )
                 ScienceTipItem(
-                    title = "避开深睡强行唤醒",
-                    content = "若在深睡期被闹钟强行打断，会引发严重的“睡眠惯性”，导致大脑长时间昏沉迟钝。"
+                    title = "Coffee nap：咖啡因与小睡配合",
+                    content = "先喝咖啡再小睡 20 分钟，是一种让咖啡因起效时恰好醒来的引导方式；咖啡因敏感者或临近夜间请谨慎。"
+                )
+                ScienceTipItem(
+                    title = "睡眠惰性：为何睡够仍昏沉",
+                    content = "即使睡够 8 小时，若从深睡阶段被唤醒，也可能出现睡眠惰性；醒后约 15–60 分钟认知可能未完全恢复，晨光与轻度活动有助于过渡。"
                 )
                 ScienceTipItem(
                     title = "推荐 5~6 个夜间周期",
