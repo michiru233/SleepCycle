@@ -10,7 +10,7 @@
 - [x] 最终构建：`./gradlew assembleDebug` 输出 `BUILD SUCCESSFUL`（38 actionable tasks）。
 - [x] APK：复制 `app/build/outputs/apk/debug/app-debug.apk` 为 `SleepCycle-v1.8.0.apk`，大小 `18,474,063` bytes；`git diff --check` 通过。
 - [ ] 人工 Android 验证：阻塞，`adb devices` 输出 `zsh:3: command not found: adb`，详见 `BLOCKED.md`。
-- [ ] Git/Release：代码与 APK 已准备，待提交、推送及创建 `v1.8.0` Release。
+- [x] Git/Release：提交 `c4efb90 feat: reorganize sleep features with navigation drawer` 已推送 `origin/main`；`v1.8.0` Release 已创建并上传 `SleepCycle-v1.8.0.apk`，URL：`https://github.com/michiru233/SleepCycle/releases/tag/v1.8.0`。
 
 - [x] **任务 1 数据层**：新增 `SleepRecordEntity`、`SleepSettingsEntity`、DAO、Room/InMemory Repository；日期主键 upsert，跨午夜时长/中点与目标校验已覆盖。
 - [x] **Room version 2**：`SleepCycleDatabase` 保留 `ChronotypeProfileEntity`，新增显式 `MIGRATION_1_2` 创建两表和默认目标；Factory 注册 migration 并注入 Room 睡眠仓库；未使用 destructive migration。
