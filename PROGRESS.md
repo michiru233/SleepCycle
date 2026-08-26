@@ -1,4 +1,17 @@
-## 14. 本期任务 1–4：睡眠记录、缺口、社会时差与双过程实现记录 (2026-08-26)
+## 19. v1.8.0 导航重组（2026-08-26）
+- [x] 任务 0 基线：`./gradlew testDebugUnitTest` 与 `./gradlew assembleDebug` 均 `BUILD SUCCESSFUL`；工作区干净。
+- **理解的目标**：首页只保留睡眠计算、时间/潜伏期、推荐结果和设闹钟闭环；其余能力通过可见 Material 3 抽屉进入，且不删除既有业务行为。
+- **实施顺序**：抽屉目的地与首页 -> 六个独立内容容器 -> 导航状态最小测试 -> 反向红绿验证 -> 版本、构建、APK、Git/Release 交付。
+- **最大风险**：Compose 抽屉与返回键状态、首页误保留次级组件、迁移组件时遗漏现有 ViewModel 回调或闹钟行为。
+- [x] 任务 1/2 导航实现：`SleepScreen` 使用 `ModalNavigationDrawer`、可见菜单按钮、BackHandler 关闭抽屉；首页仅组合模式选择、时间/潜伏期、推荐结果、闹钟与醒后提示；记录、分析、时间型与光照、小睡、知识、设置/关于均为独立内容容器。
+- [x] 导航入口契约测试：新增 `SleepNavigationTest`，基线测试数量未减少；固定六个入口顺序和首页标题均有断言。
+- [x] 反向验证：临时将六入口断言改为五，输出 `2 tests completed, 1 failed`；还原后同命令 `BUILD SUCCESSFUL`，临时错误未保留。
+- [x] 最终全量测试：`./gradlew testDebugUnitTest` 输出 `BUILD SUCCESSFUL`（27 actionable tasks）。
+- [x] 最终构建：`./gradlew assembleDebug` 输出 `BUILD SUCCESSFUL`（38 actionable tasks）。
+- [x] APK：复制 `app/build/outputs/apk/debug/app-debug.apk` 为 `SleepCycle-v1.8.0.apk`，大小 `18,474,063` bytes；`git diff --check` 通过。
+- [ ] 人工 Android 验证：阻塞，`adb devices` 输出 `zsh:3: command not found: adb`，详见 `BLOCKED.md`。
+- [ ] Git/Release：代码与 APK 已准备，待提交、推送及创建 `v1.8.0` Release。
+
 - [x] **任务 1 数据层**：新增 `SleepRecordEntity`、`SleepSettingsEntity`、DAO、Room/InMemory Repository；日期主键 upsert，跨午夜时长/中点与目标校验已覆盖。
 - [x] **Room version 2**：`SleepCycleDatabase` 保留 `ChronotypeProfileEntity`，新增显式 `MIGRATION_1_2` 创建两表和默认目标；Factory 注册 migration 并注入 Room 睡眠仓库；未使用 destructive migration。
 - [x] **任务 2 纯模型**：新增 14 天估算睡眠缺口、午睡抵扣、工作日/休息日环形中点社会时差，并限制最近 14 天与每组至少 2 条。
