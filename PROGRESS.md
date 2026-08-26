@@ -1,5 +1,5 @@
 ## 20. Neat-freak 知识收尾审计（2026-08-26）
-- **代码：changed-and-verified**。当前 `origin/main` 为 `2315dd9`，导航抽屉与六个目的地已实现；审计发现并修正 `SleepViewModel.CURRENT_APP_VERSION` 从过期 `1.7.0` 对齐为 `1.8.0`，与 Gradle `versionCode 10 / versionName 1.8.0` 一致。
+- **代码：changed-and-verified**。当前 `origin/main` 为 `70934a6`，导航抽屉与六个目的地已实现；审计发现并修正 `SleepViewModel.CURRENT_APP_VERSION` 从过期 `1.7.0` 对齐为 `1.8.0`，与 Gradle `versionCode 10 / versionName 1.8.0` 一致。
 - **运行态：changed-and-verified**。GitHub Release `v1.8.0` 已核验为非 draft、非 prerelease，URL 为 `https://github.com/michiru233/SleepCycle/releases/tag/v1.8.0`；资产 `SleepCycle-v1.8.0.apk` 已用版本常量修正后的构建重新覆盖上传，大小 `18,676,528` bytes。真实 Android UI 仍因本机 `adb` 不存在而 pending，详见 `BLOCKED.md`。
 - **文档：pending**。`README.md` 的下载安装链接仍显示 `SleepCycle-v1.7.0.apk`；本次原始任务将可修改范围限制为 `PROGRESS.md` 等文件，未越权修改 README，待下一次授权文档同步时更新。
 - **规则：verified-current**。唯一项目级规则为根目录 `AGENTS.md`；其中测试、构建、提交、推送和 Release 要求均已执行。规则要求的 APK 随提交约束通过显式强制添加满足。
