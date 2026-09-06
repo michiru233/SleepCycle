@@ -34,8 +34,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.sleepcycle.alarm.AlarmIntentManager
@@ -45,6 +47,7 @@ import com.example.sleepcycle.ui.theme.LocalSleepGradients
 import dev.chrisbanes.haze.HazeState
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlin.math.min
 
 /** The six discoverable secondary areas plus the focused calculation home. */
 enum class SleepDestination(val label: String) {
@@ -58,6 +61,9 @@ enum class SleepDestination(val label: String) {
 }
 
 private data class DrawerEntry(val destination: SleepDestination, val icon: androidx.compose.ui.graphics.vector.ImageVector)
+
+/** 抽屉宽度：窄屏手机占屏宽 80%（避免盖满全屏），大屏不超过 M3 标准 360dp。 */
+internal fun drawerWidth(screenWidthDp: Int): Dp = min(360f, screenWidthDp * 0.8f).dp
 
 private val drawerEntries = listOf(
     DrawerEntry(SleepDestination.RECORDS, Icons.Default.History),
@@ -128,7 +134,7 @@ fun SleepScreen(
             ModalDrawerSheet(
                 drawerContainerColor = Color.Transparent,
                 drawerShape = RoundedCornerShape(0.dp),
-                modifier = Modifier.glassEffect(glass)
+                modifier = Modifier.width(drawerWidth(LocalConfiguration.current.screenWidthDp)).glassEffect(glass)
             ) {
                 Spacer(Modifier.height(12.dp))
                 Text("SleepCycle", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp))
