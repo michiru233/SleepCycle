@@ -4,7 +4,7 @@
 - **文档：changed-and-verified**。README 下载入口 v1.9.0→v1.9.3（v1.9.1/v1.9.2 两版连续漏更，属第三次复发——下载入口版本号已列入发版清单）；液态玻璃特性新增主题切换条目；`docs/screenshots/` 三张玻璃版截图替换为 v1.9.3 实机截图（顶栏含切换按钮、抽屉含半透明 pill）。
 - **规则：verified-current**。根 `AGENTS.md` 为现役规则，本次测试、构建、提交、推送、版本号、Release 流程均按其执行，无死引用。
 - **记忆：not-applicable**。无项目级可写记忆系统。
-- **工作区：pending（清场候选）**。根目录 `SleepCycle-v1.8.0.apk`、`SleepCycle-v1.9.0.apk`、`SleepCycle-v1.9.1.apk`（均已被对应 GitHub Release 取代的历史本地副本）与 `sc_dark_drawer.png`、`sc_dark_home.png`、`sc_light_home.png`（会话临时截图）为删除候选；`SleepCycle-v1.9.3.apk` 为本次上传源，Release 已核实后亦可删。等用户确认后清理。
+- **工作区：verified-current**。2026-09-06 经用户确认清场：根目录历史 APK 本地副本（v1.8.0 / v1.9.0 / v1.9.1，其中 v1.8.0 为 git 追踪文件、删除已提交 `b498536`）与会话临时截图（sc_*.png）已删；`app/build/` 下仅剩构建产物 `app-debug.apk`（.gitignore 覆盖）。工作区现仅含项目源文件与文档，`git status` 干净、与 `origin/main` 同步。
 - **验证门禁**：`testDebugUnitTest` + `assembleDebug` 在 v1.9.2、v1.9.3 两次变更后均 `BUILD SUCCESSFUL`；Compose `Icons.Default.ShowChart` 弃用警告仍存在，未影响构建。
 
 ## 21. Neat-freak 知识收尾审计（2026-09-06，v1.9.0 液态玻璃改版后）
