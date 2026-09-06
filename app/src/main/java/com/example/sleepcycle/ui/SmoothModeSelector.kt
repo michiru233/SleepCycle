@@ -48,7 +48,7 @@ fun SmoothModeSelector(
             .fillMaxWidth()
             .height(48.dp)
             .clip(RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f))
+            .glassEffect()
             .padding(4.dp)
     ) {
         val totalWidth = maxWidth

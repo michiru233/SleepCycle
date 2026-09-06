@@ -124,7 +124,7 @@ $$睡眠总时长 = 周期数 \times 90分钟 + 入睡潜伏期（默认14分钟
 ### 环境要求
 - Android Studio Ladybug / Koala 或更高版本
 - JDK 17
-- Android SDK 35 (minSdk 26)
+- Android SDK 35 (minSdk 31)
 
 ### 编译与测试指令
 ```bash

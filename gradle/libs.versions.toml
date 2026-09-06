@@ -7,6 +7,7 @@ composeBom = "2024.12.01"
 junit = "4.13.2"
 lifecycleViewmodelCompose = "2.8.7"
 room = "2.6.1"
+haze = "1.1.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -20,6 +21,8 @@ androidx-compose-material-icons-extended = { group = "androidx.compose.material"
 androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
 androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
 androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
+haze = { group = "dev.chrisbanes.haze", name = "haze", version.ref = "haze" }
+haze-materials = { group = "dev.chrisbanes.haze", name = "haze-materials", version.ref = "haze" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 
 [plugins]

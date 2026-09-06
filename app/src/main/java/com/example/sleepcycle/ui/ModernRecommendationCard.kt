@@ -61,31 +61,8 @@ fun ModernRecommendationCard(
         label = "card_press_anim"
     )
 
-    val borderModifier = if (isRecommended) {
-        Modifier.border(
-            width = 1.5.dp,
-            brush = gradients.glowBorderBrush,
-            shape = RoundedCornerShape(20.dp)
-        )
-    } else {
-        Modifier.border(
-            width = 1.dp,
-            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-            shape = RoundedCornerShape(20.dp)
-        )
-    }
-
-    val backgroundBrush = if (isRecommended) {
-        gradients.recommendedCardBrush
-    } else {
-        gradients.cardBackgroundBrush
-    }
-
-    Card(
+    GlassSurface(
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color.Transparent
-        ),
         modifier = modifier
             .fillMaxWidth()
             .scale(animatedScale)
@@ -93,12 +70,10 @@ fun ModernRecommendationCard(
                 elevation = if (isRecommended) 10.dp else 2.dp,
                 shape = RoundedCornerShape(20.dp),
                 spotColor = if (isRecommended) MaterialTheme.colorScheme.primary.copy(alpha = 0.35f) else Color.Transparent
-            )
-            .then(borderModifier)
-            .background(
-                brush = backgroundBrush,
-                shape = RoundedCornerShape(20.dp)
-            )
+            ),
+        overlay = if (isRecommended) gradients.recommendedCardBrush else gradients.cardBackgroundBrush,
+        overlayAlpha = if (isRecommended) 0.55f else 0.35f,
+        borderBrush = if (isRecommended) gradients.glowBorderBrush else null
     ) {
         Row(
             modifier = Modifier

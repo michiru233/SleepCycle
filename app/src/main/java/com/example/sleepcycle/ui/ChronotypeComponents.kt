@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.WbSunny
@@ -38,10 +39,7 @@ fun ChronotypeCard(
     onAnswersChanged: (ChronotypeAnswers) -> Unit,
     onSave: () -> Unit
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f))
-    ) {
+    GlassSurface(shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("我的时间型", style = MaterialTheme.typography.titleMedium)
             if (isEditing) {
@@ -126,7 +124,11 @@ fun LightGuidanceCards(
 
 @Composable
 private fun GuidanceCard(title: String, icon: String, body: String, onSetAlarm: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.72f))) {
+    GlassSurface(
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier.fillMaxWidth(),
+        overlayColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.45f)
+    ) {
         Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("$icon  $title", style = MaterialTheme.typography.titleSmall)
             Text(body, style = MaterialTheme.typography.bodySmall)

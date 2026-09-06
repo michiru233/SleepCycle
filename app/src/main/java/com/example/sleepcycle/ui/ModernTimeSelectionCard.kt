@@ -83,27 +83,17 @@ fun ModernTimeSelectionCard(
         CalculationMode.PLAN_WAKEUP -> Color(0xFFF59E0B)
     }
 
-    Card(
+    GlassSurface(
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color.Transparent
-        ),
         modifier = modifier
             .fillMaxWidth()
             .shadow(
                 elevation = 8.dp,
                 shape = RoundedCornerShape(24.dp),
                 spotColor = modeAccentColor.copy(alpha = 0.2f)
-            )
-            .border(
-                width = 1.dp,
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
-                shape = RoundedCornerShape(24.dp)
-            )
-            .background(
-                brush = gradients.cardBackgroundBrush,
-                shape = RoundedCornerShape(24.dp)
-            )
+            ),
+        overlay = gradients.cardBackgroundBrush,
+        overlayAlpha = 0.45f
     ) {
         Column(
             modifier = Modifier.padding(20.dp),

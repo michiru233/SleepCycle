@@ -142,6 +142,26 @@ val LocalSleepGradients = staticCompositionLocalOf {
     )
 }
 
+// ==========================================
+// 液态玻璃材质参数 (Liquid Glass)
+// ==========================================
+@Immutable
+data class SleepGlassColors(
+    val tint: Color,            // 玻璃底色（半透明叠加在模糊背景上）
+    val highlightBorder: Brush, // 玻璃边缘高光描边
+    val auroraAlpha: Float      // 背景极光光斑强度
+)
+
+val LocalSleepGlass = staticCompositionLocalOf {
+    SleepGlassColors(
+        tint = Color.White.copy(alpha = 0.55f),
+        highlightBorder = Brush.linearGradient(
+            listOf(Color.White.copy(alpha = 0.9f), Color.White.copy(alpha = 0.3f), Color.White.copy(alpha = 0.6f))
+        ),
+        auroraAlpha = 0.15f
+    )
+}
+
 val SleepTypography = Typography(
     displayLarge = TextStyle(
         fontWeight = FontWeight.ExtraBold,
@@ -210,8 +230,7 @@ fun SleepCycleTheme(
     val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
 
     val sleepGradients = if (darkTheme) {
-        SleepGradientColors(
-            backgroundBrush = Brush.verticalGradient(
+        SleepGradientColors(            backgroundBrush = Brush.verticalGradient(
                 colors = listOf(
                     Color(0xFF0B0F19),
                     Color(0xFF111827),
@@ -293,7 +312,36 @@ fun SleepCycleTheme(
         )
     }
 
-    CompositionLocalProvider(LocalSleepGradients provides sleepGradients) {
+    val sleepGlass = if (darkTheme) {
+        SleepGlassColors(
+            tint = Color(0xFF0F172A).copy(alpha = 0.45f),
+            highlightBorder = Brush.linearGradient(
+                listOf(
+                    Color.White.copy(alpha = 0.35f),
+                    Color.White.copy(alpha = 0.04f),
+                    Color.White.copy(alpha = 0.18f)
+                )
+            ),
+            auroraAlpha = 0.32f
+        )
+    } else {
+        SleepGlassColors(
+            tint = Color.White.copy(alpha = 0.55f),
+            highlightBorder = Brush.linearGradient(
+                listOf(
+                    Color.White.copy(alpha = 0.9f),
+                    Color.White.copy(alpha = 0.3f),
+                    Color.White.copy(alpha = 0.6f)
+                )
+            ),
+            auroraAlpha = 0.16f
+        )
+    }
+
+    CompositionLocalProvider(
+        LocalSleepGradients provides sleepGradients,
+        LocalSleepGlass provides sleepGlass
+    ) {
         MaterialTheme(
             colorScheme = colorScheme,
             typography = SleepTypography,

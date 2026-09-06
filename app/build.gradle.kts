@@ -11,10 +11,10 @@ android {
 
     defaultConfig {
         applicationId = "com.example.sleepcycle"
-        minSdk = 26
+        minSdk = 31
         targetSdk = 35
-        versionCode = 10
-        versionName = "1.8.0"
+        versionCode = 11
+        versionName = "1.9.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -42,6 +42,8 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material.icons.extended)
+    implementation(libs.haze)
+    implementation(libs.haze.materials)
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
 

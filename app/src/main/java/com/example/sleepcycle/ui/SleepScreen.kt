@@ -40,7 +40,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.sleepcycle.alarm.AlarmIntentManager
 import com.example.sleepcycle.model.NapType
+import com.example.sleepcycle.ui.theme.LocalSleepGlass
 import com.example.sleepcycle.ui.theme.LocalSleepGradients
+import dev.chrisbanes.haze.HazeState
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
@@ -75,6 +77,8 @@ fun SleepScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val gradients = LocalSleepGradients.current
+    val glass = LocalSleepGlass.current
+    val hazeState = remember { HazeState() }
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     var destination by rememberSaveable { mutableStateOf(SleepDestination.HOME) }
@@ -117,10 +121,15 @@ fun SleepScreen(
         viewModel.markNapAlarmSet()
     }
 
+    CompositionLocalProvider(LocalHazeState provides hazeState) {
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
-            ModalDrawerSheet {
+            ModalDrawerSheet(
+                drawerContainerColor = Color.Transparent,
+                drawerShape = RoundedCornerShape(0.dp),
+                modifier = Modifier.glassEffect(glass)
+            ) {
                 Spacer(Modifier.height(12.dp))
                 Text("SleepCycle", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp))
                 Text("睡眠工具", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 24.dp))
@@ -143,28 +152,31 @@ fun SleepScreen(
             }
         }
     ) {
-        Box(modifier = modifier.fillMaxSize().background(gradients.backgroundBrush)) {
+        AuroraBackground(modifier = modifier) {
             Scaffold(
                 topBar = {
-                    TopAppBar(
-                        navigationIcon = {
-                            IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                                Icon(Icons.Default.Menu, contentDescription = "打开导航菜单")
-                            }
-                        },
-                        title = {
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                Box(modifier = Modifier.size(36.dp).clip(CircleShape).background(gradients.primaryGradientBrush), contentAlignment = Alignment.Center) {
-                                    Icon(Icons.Default.NightsStay, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+                    // 悬浮玻璃顶栏
+                    Column(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp)) {
+                        GlassSurface(shape = RoundedCornerShape(20.dp)) {
+                            Row(
+                                Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                                    Icon(Icons.Default.Menu, contentDescription = "打开导航菜单")
                                 }
-                                Column {
-                                    Text("SleepCycle", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onBackground)
-                                    Text(destination.label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                    Box(modifier = Modifier.size(36.dp).clip(CircleShape).background(gradients.primaryGradientBrush), contentAlignment = Alignment.Center) {
+                                        Icon(Icons.Default.NightsStay, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+                                    }
+                                    Column {
+                                        Text("SleepCycle", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onBackground)
+                                        Text(destination.label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
                                 }
                             }
-                        },
-                        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
-                    )
+                        }
+                    }
                 },
                 containerColor = Color.Transparent
             ) { innerPadding ->
@@ -179,6 +191,7 @@ fun SleepScreen(
                 }
             }
         }
+    }
     }
 }
 
@@ -250,7 +263,7 @@ private fun KnowledgeContent(innerPadding: PaddingValues) {
 private fun SettingsContent(state: SleepUiState, viewModel: SleepViewModel, context: android.content.Context, innerPadding: PaddingValues) {
     PageColumn(innerPadding) {
         item {
-            Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
+            GlassSurface(shape = RoundedCornerShape(16.dp)) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) { Icon(Icons.Default.Settings, contentDescription = null); Text("设置/关于", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold) }
                     Text("会直接影响计算结果的入睡潜伏期已放在首页时间设置中。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -268,7 +281,7 @@ private fun SettingsContent(state: SleepUiState, viewModel: SleepViewModel, cont
 
 @Composable
 private fun NapPresetCard(selectedNapType: NapType?, onNapSelected: (NapType) -> Unit) {
-    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.82f)), shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
+    GlassSurface(shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) { Icon(Icons.Default.Alarm, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp)); Text("小睡模式", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold); Text("应用内设置系统闹钟", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) { NapType.entries.forEach { napType -> FilterChip(selected = selectedNapType == napType, onClick = { onNapSelected(napType) }, label = { Text(if (napType == NapType.COFFEE_NAP) "咖啡 nap" else napType.label, maxLines = 1) }, modifier = Modifier.weight(1f)) } }
@@ -284,7 +297,11 @@ private fun CoffeeNapDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
 
 @Composable
 private fun WakeUpGuidanceCard(text: String) {
-    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.72f)), shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
+    GlassSurface(
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier.fillMaxWidth(),
+        overlayColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
+    ) {
         Row(Modifier.padding(14.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.Top) { Icon(Icons.Default.WbSunny, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(20.dp)); Column(verticalArrangement = Arrangement.spacedBy(4.dp)) { Text("醒后缓冲提示", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer); Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onPrimaryContainer) } }
     }
 }
@@ -292,7 +309,12 @@ private fun WakeUpGuidanceCard(text: String) {
 @Composable
 fun ModernScientificNoteCard(modifier: Modifier = Modifier) {
     val gradients = LocalSleepGradients.current
-    Card(shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.Transparent), modifier = modifier.fillMaxWidth().border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f), RoundedCornerShape(20.dp)).background(gradients.cardBackgroundBrush, RoundedCornerShape(20.dp))) {
+    GlassSurface(
+        shape = RoundedCornerShape(20.dp),
+        modifier = modifier.fillMaxWidth(),
+        overlay = gradients.cardBackgroundBrush,
+        overlayAlpha = 0.45f
+    ) {
         Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) { Box(Modifier.size(28.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)), contentAlignment = Alignment.Center) { Icon(Icons.Default.Lightbulb, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp)) }; Text("睡眠周期科学小贴士", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface) }
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
