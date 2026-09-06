@@ -6,7 +6,7 @@
 
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.0.0-blue.svg?logo=kotlin)](https://kotlinlang.org)
 [![Jetpack Compose](https://img.shields.io/badge/UI-Jetpack%20Compose%20M3-brightgreen.svg?logo=jetpackcompose)](https://developer.android.com/jetpack/compose)
-[![API](https://img.shields.io/badge/API-26%2B-orange.svg)](#)
+[![API](https://img.shields.io/badge/API-31%2B-orange.svg)](#)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 [功能特性](#-功能特性) • [科学原理](#-科学原理) • [界面预览](#-界面预览) • [下载安装](#-下载安装) • [技术架构](#-技术架构) • [本地构建](#-本地构建)
@@ -58,8 +58,9 @@
 - 🌅 **晨间光照与睡前数字日落**：
   - 根据起床/入睡时间生成起床后尽快接触户外光 10–30 分钟，以及目标入睡前 60–120 分钟开始数字日落的建议。
   - 可通过现有系统闹钟 Intent 设置提醒；App 不测量 lux、不检测褪黑素，也不申请通知、定位或健康传感器权限。蓝光过滤器不被描述为确定有效的治疗，建议仅供参考并考虑个体差异。
-- 🎨 **Material 3 现代美学**：
-  - 沉浸式暗色调夜间主题与精致的卡片化排版。
+- 🎨 **液态玻璃 (Liquid Glass) 界面**：
+  - 全局磨砂玻璃材质：卡片、悬浮顶栏与导航抽屉均带真背景模糊、高光描边与半透明底色。
+  - 背景在主题渐变上叠加静态极光光斑，深色（星夜黑玻璃）与浅色（晨曦白玻璃）双主题均适配。
   - 针对 5 周期黄金睡眠（7.5小时 + 潜伏期）智能高亮与推荐。
   - 严谨的跨天时间计算与边界防护（如 `23:30 -> 次日` 或 `00:30 -> 前日`）。
 
@@ -88,9 +89,9 @@ $$睡眠总时长 = 周期数 \times 90分钟 + 入睡潜伏期（默认14分钟
 ## 📱 界面预览
 
 <div align="center">
-  <img src="docs/screenshots/sleep_cycle_now.png" width="30%" alt="我现在就睡" />
-  <img src="docs/screenshots/sleep_cycle_plan_bedtime.png" width="30%" alt="规划入睡时间" />
-  <img src="docs/screenshots/sleep_cycle_latency_dialog.png" width="30%" alt="入睡潜伏期设置" />
+  <img src="docs/screenshots/sleep_cycle_glass_dark.png" width="30%" alt="液态玻璃深色首页" />
+  <img src="docs/screenshots/sleep_cycle_glass_light.png" width="30%" alt="液态玻璃浅色首页" />
+  <img src="docs/screenshots/sleep_cycle_glass_drawer.png" width="30%" alt="液态玻璃导航抽屉" />
 </div>
 
 ---
@@ -98,9 +99,9 @@ $$睡眠总时长 = 周期数 \times 90分钟 + 入睡潜伏期（默认14分钟
 ## 📥 下载安装
 
 前往 [Releases 页面](../../releases/latest) 下载最新的 APK 安装包：
-- **[SleepCycle-v1.8.0.apk](../../releases/latest)**
+- **[SleepCycle-v1.9.0.apk](../../releases/latest)**
 
-> 适配 Android 8.0 (API Level 26) 及以上版本系统。
+> 适配 Android 12 (API Level 31) 及以上版本系统。
 
 ---
 
@@ -116,6 +117,7 @@ $$睡眠总时长 = 周期数 \times 90分钟 + 入睡潜伏期（默认14分钟
   - `SleepRecordEntity` + `SleepSettingsEntity` + Room version 2：手动睡眠记录与睡眠目标，显式保留 version 1 时间型档案
   - `SleepStatsCalculator` + `SocialJetLagCalculator` + `TwoProcessModel`：14 天估算统计和 24 小时模型曲线
   - `SleepViewModel` & `StateFlow`: 响应式状态管理
+  - `GlassSurface` + Haze: 液态玻璃材质组件（真背景模糊、高光描边、品牌渐变叠层）
 
 ---
 

@@ -7,7 +7,7 @@ composeBom = "2024.12.01"
 junit = "4.13.2"
 lifecycleViewmodelCompose = "2.8.7"
 room = "2.6.1"
-haze = "1.1.1"
+haze = "1.1.1" # 请勿随意升级：1.2+ 以 Kotlin 2.1 编译，Room 2.6.1 kapt 读不了 2.1 metadata 会直接崩
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
