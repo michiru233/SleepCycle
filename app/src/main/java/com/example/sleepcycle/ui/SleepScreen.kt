@@ -84,6 +84,8 @@ private val drawerEntries = listOf(
 @Composable
 fun SleepScreen(
     viewModel: SleepViewModel,
+    isDarkTheme: Boolean,
+    onToggleTheme: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -187,6 +189,13 @@ fun SleepScreen(
                                         Text("SleepCycle", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onBackground)
                                         Text(destination.label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
+                                }
+                                Spacer(Modifier.weight(1f))
+                                IconButton(onClick = onToggleTheme) {
+                                    Icon(
+                                        if (isDarkTheme) Icons.Default.WbSunny else Icons.Default.NightsStay,
+                                        contentDescription = if (isDarkTheme) "切换到浅色模式" else "切换到深色模式"
+                                    )
                                 }
                             }
                         }
