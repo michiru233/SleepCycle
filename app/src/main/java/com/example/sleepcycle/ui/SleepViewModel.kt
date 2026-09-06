@@ -515,7 +515,7 @@ class SleepViewModel(
     }
 
     companion object {
-        const val CURRENT_APP_VERSION = "1.9.1"
+        const val CURRENT_APP_VERSION = "1.9.2"
 
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {

@@ -65,6 +65,12 @@ private data class DrawerEntry(val destination: SleepDestination, val icon: andr
 /** 抽屉宽度：窄屏手机占屏宽 80%（避免盖满全屏），大屏不超过 M3 标准 360dp。 */
 internal fun drawerWidth(screenWidthDp: Int): Dp = min(360f, screenWidthDp * 0.8f).dp
 
+/** 抽屉菜单项配色：选中 pill 半透明，让磨砂玻璃透出来；未选中项透明，按压反馈交给默认 ripple。 */
+@Composable
+private fun glassDrawerItemColors() = NavigationDrawerItemDefaults.colors(
+    selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.65f)
+)
+
 private val drawerEntries = listOf(
     DrawerEntry(SleepDestination.RECORDS, Icons.Default.History),
     DrawerEntry(SleepDestination.ANALYSIS, Icons.Default.ShowChart),
@@ -144,6 +150,7 @@ fun SleepScreen(
                     selected = destination == SleepDestination.HOME,
                     onClick = { destination = SleepDestination.HOME; scope.launch { drawerState.close() } },
                     icon = { Icon(Icons.Default.NightsStay, contentDescription = null) },
+                    colors = glassDrawerItemColors(),
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                 )
                 drawerEntries.forEach { entry ->
@@ -152,6 +159,7 @@ fun SleepScreen(
                         selected = destination == entry.destination,
                         onClick = { destination = entry.destination; scope.launch { drawerState.close() } },
                         icon = { Icon(entry.icon, contentDescription = null) },
+                        colors = glassDrawerItemColors(),
                         modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                     )
                 }

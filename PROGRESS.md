@@ -1,3 +1,12 @@
+## 21. Neat-freak 知识收尾审计（2026-09-06，v1.9.0 液态玻璃改版后）
+- **代码：changed-and-verified**。`origin/main` 为 `7737afd docs: sync v1.9.0 reality...`；v1.9.0 引入 Haze 1.1.1 液态玻璃（真模糊 + 高光描边 + 极光背景）、minSdk 26→31、versionCode 11 / versionName 1.9.0。审计发现 `SleepViewModel.CURRENT_APP_VERSION` 又从 1.8.0 漂移（v1.8.0 审计已修过同类问题，属复发），已对齐 1.9.0 并重建资产。**教训**：版本常量与 Gradle versionName 是两处真相，每次发版都会漏同步——后续发版应把该常量修正列入发版清单。
+- **运行态：changed-and-verified**。GitHub Release `v1.9.0` 非 draft、非 prerelease，资产 `SleepCycle-v1.9.0.apk`（58,186,990 bytes，版本常量修正后的构建）已 `--clobber` 覆盖上传；模拟器（API 31+）深浅色截图与视觉验收通过，无崩溃。
+- **文档：changed-and-verified**。README 已同步 API 31+ 徽章、Android 12 适配、v1.9.0 下载入口、液态玻璃功能条目、玻璃版界面预览与技术架构组件；Haze 钉版原因以注释形式固化在 `gradle/libs.versions.toml`（唯一权威位置）。
+- **规则：verified-current**。项目现役规则为根目录 `AGENTS.md`；本期测试、构建、提交、推送、版本号更新与 Release 流程均已执行。
+- **记忆：not-applicable**。无项目级可写记忆系统。
+- **工作区：pending（清场候选）**。根目录 `SleepCycle-v1.8.0.apk`（被 v1.9.0 取代的历史 Release 本地副本）与 `sc_dark_home.png`、`sc_light_home.png`、`sc_dark_drawer.png`（本次会话截图，已并入 `docs/screenshots/sleep_cycle_glass_*.png`）为删除候选，等用户确认后清理。
+- **验证门禁**：`testDebugUnitTest` + `assembleDebug` 在常量修正后 `BUILD SUCCESSFUL`；Compose `Icons.Default.ShowChart` 弃用警告仍存在，未影响构建。
+
 ## 20. Neat-freak 知识收尾审计（2026-08-26）
 - **代码：changed-and-verified**。当前 `origin/main` 与本地工作区同步，导航抽屉与六个目的地已实现；审计发现并修正 `SleepViewModel.CURRENT_APP_VERSION` 从过期 `1.7.0` 对齐为 `1.8.0`，与 Gradle `versionCode 10 / versionName 1.8.0` 一致。
 - **运行态：changed-and-verified**。GitHub Release `v1.8.0` 已核验为非 draft、非 prerelease，URL 为 `https://github.com/michiru233/SleepCycle/releases/tag/v1.8.0`；资产 `SleepCycle-v1.8.0.apk` 已用版本常量修正后的构建重新覆盖上传，大小 `18,676,528` bytes。真实 Android UI 仍因本机 `adb` 不存在而 pending，详见 `BLOCKED.md`。
