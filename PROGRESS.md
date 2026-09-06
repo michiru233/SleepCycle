@@ -1,3 +1,12 @@
+## 22. Neat-freak 发布收尾审计（2026-09-06，v1.9.3 发布后）
+- **代码：changed-and-verified**。`origin/main` 为 `052fb0d`，与本地同步。本会话两个功能：v1.9.2 导航抽屉选中项改半透明玻璃 pill（`glassDrawerItemColors()`，secondaryContainer alpha 0.65，深浅色自动跟随主题）；v1.9.3 顶栏深色/浅色切换按钮（`MainActivity` 持可空 `darkOverride`，未切换跟随系统，切换后存 `ui_prefs` SharedPreferences）。版本 versionCode 14 / versionName 1.9.3，`CURRENT_APP_VERSION` 本次在发版前主动同步（v1.9.2 时曾漏，靠清单补齐）。
+- **运行态：changed-and-verified**。GitHub Release `v1.9.3` 非 draft、非 prerelease，资产 `SleepCycle-v1.9.3.apk`（57,671,054 bytes）即模拟器验收所用同一构建。模拟器实测：玻璃 pill 深浅色视觉通过；主题切换即时生效、强杀重启后保持（系统保持浅色时应用仍为深色）。
+- **文档：changed-and-verified**。README 下载入口 v1.9.0→v1.9.3（v1.9.1/v1.9.2 两版连续漏更，属第三次复发——下载入口版本号已列入发版清单）；液态玻璃特性新增主题切换条目；`docs/screenshots/` 三张玻璃版截图替换为 v1.9.3 实机截图（顶栏含切换按钮、抽屉含半透明 pill）。
+- **规则：verified-current**。根 `AGENTS.md` 为现役规则，本次测试、构建、提交、推送、版本号、Release 流程均按其执行，无死引用。
+- **记忆：not-applicable**。无项目级可写记忆系统。
+- **工作区：pending（清场候选）**。根目录 `SleepCycle-v1.8.0.apk`、`SleepCycle-v1.9.0.apk`、`SleepCycle-v1.9.1.apk`（均已被对应 GitHub Release 取代的历史本地副本）与 `sc_dark_drawer.png`、`sc_dark_home.png`、`sc_light_home.png`（会话临时截图）为删除候选；`SleepCycle-v1.9.3.apk` 为本次上传源，Release 已核实后亦可删。等用户确认后清理。
+- **验证门禁**：`testDebugUnitTest` + `assembleDebug` 在 v1.9.2、v1.9.3 两次变更后均 `BUILD SUCCESSFUL`；Compose `Icons.Default.ShowChart` 弃用警告仍存在，未影响构建。
+
 ## 21. Neat-freak 知识收尾审计（2026-09-06，v1.9.0 液态玻璃改版后）
 - **代码：changed-and-verified**。`origin/main` 为 `7737afd docs: sync v1.9.0 reality...`；v1.9.0 引入 Haze 1.1.1 液态玻璃（真模糊 + 高光描边 + 极光背景）、minSdk 26→31、versionCode 11 / versionName 1.9.0。审计发现 `SleepViewModel.CURRENT_APP_VERSION` 又从 1.8.0 漂移（v1.8.0 审计已修过同类问题，属复发），已对齐 1.9.0 并重建资产。**教训**：版本常量与 Gradle versionName 是两处真相，每次发版都会漏同步——后续发版应把该常量修正列入发版清单。
 - **运行态：changed-and-verified**。GitHub Release `v1.9.0` 非 draft、非 prerelease，资产 `SleepCycle-v1.9.0.apk`（58,186,990 bytes，版本常量修正后的构建）已 `--clobber` 覆盖上传；模拟器（API 31+）深浅色截图与视觉验收通过，无崩溃。
