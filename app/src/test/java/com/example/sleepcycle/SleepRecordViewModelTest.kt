@@ -91,4 +91,55 @@ class SleepRecordViewModelTest {
         viewModel.saveSleepRecord()
         assertTrue(viewModel.uiState.value.recordSaveState is SleepRecordSaveState.Error)
     }
+
+    @Test
+    fun quickRecordBedtimeAndWakeTimeComputesDurationCorrectly() = runBlocking {
+        val repository = InMemorySleepRecordRepository()
+        val viewModel = viewModel(repository)
+        val today = LocalDate.of(2026, 9, 7)
+
+        // 晚上 23:30 打卡入睡
+        viewModel.quickRecordBedtime(now = LocalTime.of(23, 30), today = today)
+        var records = repository.loadRecords()
+        assertEquals(1, records.size)
+        val bedRecord = records.single()
+        assertEquals(today, bedRecord.date)
+        assertEquals(LocalTime.of(23, 30), bedRecord.bedtime)
+        assertEquals(0, bedRecord.primarySleepMinutes)
+        assertTrue(viewModel.uiState.value.quickRecordSummary.isSleeping)
+        assertTrue(viewModel.uiState.value.quickRecordSummary.statusText.contains("23:30"))
+
+        // 次日 07:15 打卡醒来
+        val nextDay = today.plusDays(1)
+        viewModel.quickRecordWakeTime(now = LocalTime.of(7, 15), today = nextDay)
+        records = repository.loadRecords()
+        assertEquals(1, records.size)
+        val completedRecord = records.single()
+        assertEquals(today, completedRecord.date)
+        assertEquals(LocalTime.of(23, 30), completedRecord.bedtime)
+        assertEquals(LocalTime.of(7, 15), completedRecord.wakeTime)
+        // 23:30 到 07:15 为 7小时45分 = 465分钟
+        assertEquals(465, completedRecord.primarySleepMinutes)
+        assertEquals(false, viewModel.uiState.value.quickRecordSummary.isSleeping)
+        assertTrue(viewModel.uiState.value.quickRecordSummary.statusText.contains("7小时45分"))
+    }
+
+    @Test
+    fun quickRecordWakeTimeWithoutPriorBedtimeUsesDefaultBedtime() = runBlocking {
+        val repository = InMemorySleepRecordRepository()
+        val viewModel = viewModel(repository)
+        val today = LocalDate.of(2026, 9, 7)
+
+        // 没有打卡入睡，直接打卡醒来 08:00
+        viewModel.quickRecordWakeTime(now = LocalTime.of(8, 0), today = today)
+        val records = repository.loadRecords()
+        assertEquals(1, records.size)
+        val record = records.single()
+        assertEquals(today.minusDays(1), record.date)
+        assertEquals(LocalTime.of(23, 0), record.bedtime)
+        assertEquals(LocalTime.of(8, 0), record.wakeTime)
+        // 23:00 到 08:00 为 9小时 = 540分钟
+        assertEquals(540, record.primarySleepMinutes)
+    }
 }
+

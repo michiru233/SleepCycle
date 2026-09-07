@@ -95,6 +95,7 @@ fun SleepScreen(
     val hazeState = remember { HazeState() }
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
     var destination by rememberSaveable { mutableStateOf(SleepDestination.HOME) }
 
     LaunchedEffect(viewModel) {
@@ -103,6 +104,12 @@ fun SleepScreen(
                 is UpdateEvent.UpToDate -> Toast.makeText(context, "当前已是最新版本 (v${SleepViewModel.CURRENT_APP_VERSION})", Toast.LENGTH_SHORT).show()
                 is UpdateEvent.Error -> Toast.makeText(context, "检查更新失败: ${event.message}", Toast.LENGTH_LONG).show()
             }
+        }
+    }
+
+    LaunchedEffect(viewModel) {
+        viewModel.quickRecordEvents.collectLatest { message ->
+            snackbarHostState.showSnackbar(message)
         }
     }
 
@@ -201,6 +208,9 @@ fun SleepScreen(
                         }
                     }
                 },
+                snackbarHost = {
+                    SnackbarHost(snackbarHostState)
+                },
                 containerColor = Color.Transparent
             ) { innerPadding ->
                 when (destination) {
@@ -226,6 +236,13 @@ private fun PageColumn(innerPadding: PaddingValues, content: LazyListScope.() ->
 @Composable
 private fun HomeContent(state: SleepUiState, viewModel: SleepViewModel, context: android.content.Context, innerPadding: PaddingValues) {
     PageColumn(innerPadding) {
+        item {
+            QuickRecordCard(
+                summary = state.quickRecordSummary,
+                onRecordBedtime = { viewModel.quickRecordBedtime() },
+                onRecordWakeTime = { viewModel.quickRecordWakeTime() }
+            )
+        }
         item { Spacer(Modifier.height(2.dp)); SmoothModeSelector(selectedMode = state.selectedMode, onModeSelected = viewModel::onModeSelected) }
         item { ModernTimeSelectionCard(mode = state.selectedMode, selectedTime = state.selectedTime, latencyMinutes = state.latencyMinutes, onTimePicked = viewModel::onTimeSelected, onLatencyChanged = viewModel::onLatencyChanged, onRefreshTime = viewModel::refreshCurrentTime) }
         item {
