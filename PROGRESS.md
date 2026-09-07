@@ -1,3 +1,12 @@
+## 23. Neat-freak 发布收尾审计（2026-09-07，v1.9.4 发布后）
+- **代码：changed-and-verified**。`origin/main` 包含 `5b5a715 feat: add quick sleep record card on home screen (v1.9.4)`；新增 `QuickRecordCard.kt`、首页集成一键打卡卡片、`SleepViewModel` 增加 `quickRecordBedtime` / `quickRecordWakeTime` 与打卡事件通知；版本 versionCode 15 / versionName 1.9.4，`SleepViewModel.CURRENT_APP_VERSION` 同步为 1.9.4；全量单元测试新增 2 个场景覆盖，100% 绿灯通过。
+- **运行态：changed-and-verified**。GitHub Release `v1.9.4`（非 draft、非 prerelease）已创建，产物 `SleepCycle-v1.9.4.apk` 成功上传。
+- **文档：changed-and-verified**。`README.md` 下载链接已从 v1.9.3 更新为 v1.9.4，功能特性章节补充「一键打卡与睡眠记录」核心说明。
+- **规则：verified-current**。项目级规则为根目录 `AGENTS.md`，测试、构建、提交、推送、版本升级和 Release 流程完全按规范执行，无死引用。
+- **记忆：not-applicable**。无项目级可写记忆系统。
+- **工作区：verified-current**。本地构建临时 `SleepCycle-v1.9.4.apk` 在 Release 验证后已清理，构建缓存已受 `.gitignore` 保护。
+- **验证门禁**：`./gradlew testDebugUnitTest` 与 `./gradlew assembleDebug` 均 `BUILD SUCCESSFUL`。
+
 ## 22. Neat-freak 发布收尾审计（2026-09-06，v1.9.3 发布后）
 - **代码：changed-and-verified**。`origin/main` 为 `052fb0d`，与本地同步。本会话两个功能：v1.9.2 导航抽屉选中项改半透明玻璃 pill（`glassDrawerItemColors()`，secondaryContainer alpha 0.65，深浅色自动跟随主题）；v1.9.3 顶栏深色/浅色切换按钮（`MainActivity` 持可空 `darkOverride`，未切换跟随系统，切换后存 `ui_prefs` SharedPreferences）。版本 versionCode 14 / versionName 1.9.3，`CURRENT_APP_VERSION` 本次在发版前主动同步（v1.9.2 时曾漏，靠清单补齐）。
 - **运行态：changed-and-verified**。GitHub Release `v1.9.3` 非 draft、非 prerelease，资产 `SleepCycle-v1.9.3.apk`（57,671,054 bytes）即模拟器验收所用同一构建。模拟器实测：玻璃 pill 深浅色视觉通过；主题切换即时生效、强杀重启后保持（系统保持浅色时应用仍为深色）。
