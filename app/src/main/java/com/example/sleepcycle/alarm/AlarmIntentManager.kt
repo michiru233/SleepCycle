@@ -19,7 +19,7 @@ data class AlarmConfig(
         fun fromLocalTime(
             targetTime: LocalTime,
             message: String = "睡眠周期智能唤醒",
-            skipUi: Boolean = false
+            skipUi: Boolean = true
         ): AlarmConfig {
             return AlarmConfig(
                 hour = targetTime.hour,
