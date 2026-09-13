@@ -244,7 +244,7 @@ private fun HomeContent(state: SleepUiState, viewModel: SleepViewModel, context:
             )
         }
         item { Spacer(Modifier.height(2.dp)); SmoothModeSelector(selectedMode = state.selectedMode, onModeSelected = viewModel::onModeSelected) }
-        item { ModernTimeSelectionCard(mode = state.selectedMode, selectedTime = state.selectedTime, latencyMinutes = state.latencyMinutes, onTimePicked = viewModel::onTimeSelected, onLatencyChanged = viewModel::onLatencyChanged, onRefreshTime = viewModel::refreshCurrentTime, onBedtimePlus15 = { viewModel.quickRecordBedtimePlus15() }) }
+        item { ModernTimeSelectionCard(mode = state.selectedMode, selectedTime = state.selectedTime, latencyMinutes = state.latencyMinutes, onTimePicked = viewModel::onTimeSelected, onLatencyChanged = viewModel::onLatencyChanged, onRefreshTime = viewModel::refreshCurrentTime) }
         item {
             val headerText = when (state.selectedMode) {
                 CalculationMode.SLEEP_NOW -> "推荐闹钟时间 (若现在入睡)"
@@ -259,9 +259,10 @@ private fun HomeContent(state: SleepUiState, viewModel: SleepViewModel, context:
             ModernRecommendationCard(recommendation = rec, mode = state.selectedMode, onSetAlarm = {
                 val message = when (state.selectedMode) { CalculationMode.PLAN_WAKEUP -> "睡眠周期提示: 准备上床入睡"; else -> "SleepCycle 浅睡智能唤醒 (${rec.cycleCount}个周期)" }
                 AlarmIntentManager.setAlarm(context, rec.targetTime, message)
-                // 起床锚点：仅当卡片给出的是起床时间时写入记录；计划起床模式是就寝提醒，不碰数据
+                // 睡眠计划联动：一次写入两端（入睡 = 按下时刻 + 潜伏期，起床 = 闹钟时间）；
+                // 计划起床模式的卡片是就寝提醒，不写数据
                 if (state.selectedMode != CalculationMode.PLAN_WAKEUP) {
-                    viewModel.recordWakeAnchor(rec.targetTime)
+                    viewModel.recordSleepPlan(targetTime = rec.targetTime, latencyMinutes = state.latencyMinutes)
                 }
                 viewModel.showSleepInertiaGuidance()
             })

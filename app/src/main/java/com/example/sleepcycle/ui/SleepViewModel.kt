@@ -362,37 +362,24 @@ class SleepViewModel(
     }
 
     /**
-     * "+15 分钟"快捷入睡：当前时刻推后 15 分钟写入对应睡眠日的记录（后来者覆盖，见 CONTEXT.md）。
-     * 无记录时创建半成品记录；已有醒来端时重算时长；"睡眠中"占位保持不变。
+     * 睡眠计划联动（见 CONTEXT.md）：推荐时间卡设闹钟时一次写入两端——
+     * 入睡 = 按下按钮时刻 + 入睡潜伏期（与推荐计算口径一致），起床 = 闹钟响铃时间。
+     * 睡眠日归属共用 sleepDayOf；「睡眠中」占位保持不变。
      */
-    fun quickRecordBedtimePlus15(now: LocalTime = LocalTime.now(), today: LocalDate = LocalDate.now()) {
-        val bedtime = now.plusMinutes(15)
+    fun recordSleepPlan(
+        targetTime: LocalTime,
+        latencyMinutes: Int,
+        now: LocalTime = LocalTime.now(),
+        today: LocalDate = LocalDate.now()
+    ) {
         val sleepDay = SleepRecord.sleepDayOf(now, today)
-        writeLinkageRecord(sleepDay, { record -> "已记录入睡时间 ${record.bedtime?.format(linkTimeFormatter) ?: "--:--"}" }) { existing ->
-            val wake = existing?.wakeTime
+        val bedtime = now.plusMinutes(latencyMinutes.toLong())
+        writeLinkageRecord(sleepDay, { record -> "已记录睡眠计划：入睡 ${record.bedtime?.format(linkTimeFormatter) ?: "--:--"}，起床 ${record.wakeTime?.format(linkTimeFormatter) ?: "--:--"}" }) { existing ->
             // primarySleepMinutes==0 是"睡眠中"占位，保持到醒来确认
-            val primary = when {
-                wake == null -> null
-                existing?.primarySleepMinutes == 0 -> 0
-                else -> SleepRecord.durationBetween(bedtime, wake)
-            }
-            SleepRecord(sleepDay, bedtime, wake, primary, existing?.napMinutes ?: 0)
-        }
-    }
-
-    /**
-     * 起床锚点（见 CONTEXT.md）：设置推荐起床闹钟时，把闹钟时间作为起床时间写入对应睡眠日的记录。
-     * 与 "+15 分钟" 共用睡眠日归属；无入睡数据时保持半成品；"睡眠中"占位保持不变。
-     */
-    fun recordWakeAnchor(targetTime: LocalTime, now: LocalTime = LocalTime.now(), today: LocalDate = LocalDate.now()) {
-        val sleepDay = SleepRecord.sleepDayOf(now, today)
-        writeLinkageRecord(sleepDay, { record -> "已记录起床时间 ${record.wakeTime?.format(linkTimeFormatter) ?: "--:--"}，今晚入睡后自动统计" }) { existing ->
-            val bedtime = existing?.bedtime
-            // primarySleepMinutes==0 是"睡眠中"占位，保持到醒来确认
-            val primary = when {
-                bedtime == null -> null
-                existing?.primarySleepMinutes == 0 -> 0
-                else -> SleepRecord.durationBetween(bedtime, targetTime)
+            val primary = if (existing?.primarySleepMinutes == 0) {
+                0
+            } else {
+                SleepRecord.durationBetween(bedtime, targetTime)
             }
             SleepRecord(sleepDay, bedtime, targetTime, primary, existing?.napMinutes ?: 0)
         }
@@ -714,7 +701,7 @@ class SleepViewModel(
     }
 
     companion object {
-        const val CURRENT_APP_VERSION = "1.10.0"
+        const val CURRENT_APP_VERSION = "1.10.1"
 
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {

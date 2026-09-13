@@ -64,7 +64,6 @@ fun ModernTimeSelectionCard(
     onTimePicked: (LocalTime) -> Unit,
     onLatencyChanged: (Int) -> Unit,
     onRefreshTime: () -> Unit,
-    onBedtimePlus15: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -226,31 +225,6 @@ fun ModernTimeSelectionCard(
                             fontSize = 14.sp
                         )
                     }
-                }
-            }
-
-            // "+15 分钟"快捷入睡：当前时刻推后 15 分钟写入今晚记录
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                FilledTonalButton(
-                    onClick = onBedtimePlus15,
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.filledTonalButtonColors(
-                        containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
-                        contentColor = MaterialTheme.colorScheme.primary
-                    ),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Bedtime,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "+15 分钟后入睡",
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 13.sp
-                    )
                 }
             }
 
