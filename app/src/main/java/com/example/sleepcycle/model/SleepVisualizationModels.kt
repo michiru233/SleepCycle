@@ -90,3 +90,14 @@ fun bandPositions(axis: SleepBandAxis, stats: List<DailySleepStat>): List<Pair<F
         Pair(relStart / span.toFloat(), relEnd / span.toFloat())
     }
 }
+
+/** 热力图格子布局（工单 #12）：列=周一..周日，行=周序；行首按首日星期补空，尾部补 null */
+fun heatmapRows(stats: List<DailySleepStat>): List<List<DailySleepStat?>> {
+    if (stats.isEmpty()) return emptyList()
+    val leadingBlanks = stats.first().date.dayOfWeek.value - 1 // Monday=1 → 0 个空格
+    val cells: List<DailySleepStat?> = List(leadingBlanks) { null } + stats
+    val rowCount = (cells.size + 6) / 7
+    return (0 until rowCount).map { row ->
+        (0 until 7).map { column -> cells.getOrNull(row * 7 + column) }
+    }
+}

@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.NightsStay
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -35,6 +36,7 @@ import com.example.sleepcycle.model.DailySleepStat
 import com.example.sleepcycle.model.SleepGoalLevel
 import com.example.sleepcycle.model.bandAxis
 import com.example.sleepcycle.model.bandPositions
+import com.example.sleepcycle.model.heatmapRows
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -83,6 +85,11 @@ fun SleepVisualizationSection(
         SleepBandCard(
             stats = state.dailySleepStats,
             windowDays = state.visualizationWindowDays,
+            selectedDate = state.selectedStatDate,
+            onDateToggle = onDateToggle
+        )
+        SleepHeatmapCard(
+            stats = state.dailySleepStats,
             selectedDate = state.selectedStatDate,
             onDateToggle = onDateToggle
         )
@@ -254,6 +261,123 @@ fun SleepBandCard(
 }
 
 private fun formatAxisClock(minutes: Int): String = "%02d:%02d".format(minutes / 60, minutes % 60)
+
+/** 睡眠热力图（工单 #12）：格子日历按周分行，按达标四档着色，点选查看当日详情 */
+@Composable
+fun SleepHeatmapCard(
+    stats: List<DailySleepStat>,
+    selectedDate: LocalDate?,
+    onDateToggle: (LocalDate) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    GlassSurface(shape = RoundedCornerShape(16.dp), modifier = modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.CalendarMonth, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.height(20.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("睡眠热力图", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.weight(1f))
+            }
+            LegendRow()
+            HeatmapCanvas(
+                stats = stats,
+                selectedDate = selectedDate,
+                onDateToggle = onDateToggle,
+                modifier = Modifier.fillMaxWidth()
+            )
+            selectedDate?.let { date ->
+                val stat = stats.firstOrNull { it.date == date }
+                if (stat != null) {
+                    Text(
+                        stat.detailText(),
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 10.dp, vertical = 8.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LegendRow() {
+    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+        listOf(
+            SleepGoalLevel.ON_TARGET to "达标",
+            SleepGoalLevel.NEAR_TARGET to "接近",
+            SleepGoalLevel.LARGE_GAP to "缺口大",
+            SleepGoalLevel.NO_RECORD to "无记录"
+        ).forEach { (level, label) ->
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                androidx.compose.foundation.layout.Box(
+                    modifier = Modifier
+                        .height(10.dp)
+                        .width(10.dp)
+                        .background(level.barColor().let { if (level == SleepGoalLevel.NO_RECORD) MaterialTheme.colorScheme.surfaceVariant else it }, RoundedCornerShape(3.dp))
+                )
+                Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+}
+
+@Composable
+private fun HeatmapCanvas(
+    stats: List<DailySleepStat>,
+    selectedDate: LocalDate?,
+    onDateToggle: (LocalDate) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val rows = heatmapRows(stats)
+    if (rows.isEmpty()) return
+    val emptyColor = MaterialTheme.colorScheme.surfaceVariant
+    val selectionColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f)
+    val cellHeightDp = ((rows.size * 44f) / 3f).dp
+    Canvas(
+        modifier = modifier
+            .height(cellHeightDp)
+            .pointerInput(stats, selectedDate) {
+                detectTapGestures { offset ->
+                    val column = (offset.x / size.width * 7).toInt().coerceIn(0, 6)
+                    val row = (offset.y / size.height * rows.size).toInt().coerceIn(0, rows.size - 1)
+                    rows[row][column]?.let { onDateToggle(it.date) }
+                }
+            }
+    ) {
+        val cellWidth = size.width / 7f
+        val cellHeight = size.height / rows.size
+        val cellSize = minOf(cellWidth, cellHeight) * 0.72f
+        rows.forEachIndexed { rowIndex, row ->
+            row.forEachIndexed { columnIndex, cell ->
+                if (cell == null) return@forEachIndexed
+                val left = columnIndex * cellWidth + (cellWidth - cellSize) / 2f
+                val top = rowIndex * cellHeight + (cellHeight - cellSize) / 2f
+                val corner = androidx.compose.ui.geometry.CornerRadius(8f, 8f)
+                val color = if (cell.goalLevel == SleepGoalLevel.NO_RECORD) emptyColor else cell.goalLevel.barColor()
+                drawRoundRect(
+                    color = color,
+                    topLeft = Offset(left, top),
+                    size = Size(cellSize, cellSize),
+                    cornerRadius = corner
+                )
+                if (cell.date == selectedDate) {
+                    drawRoundRect(
+                        color = selectionColor,
+                        topLeft = Offset(left - 3f, top - 3f),
+                        size = Size(cellSize + 6f, cellSize + 6f),
+                        cornerRadius = corner,
+                        style = Stroke(width = 4f)
+                    )
+                }
+            }
+        }
+    }
+}
 
 @Composable
 private fun TrendCanvas(

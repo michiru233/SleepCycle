@@ -6,6 +6,7 @@ import com.example.sleepcycle.model.SleepRecord
 import com.example.sleepcycle.model.SleepVisualizationCalculator
 import com.example.sleepcycle.model.bandAxis
 import com.example.sleepcycle.model.bandPositions
+import com.example.sleepcycle.model.heatmapRows
 import com.example.sleepcycle.ui.SleepViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -165,5 +166,42 @@ class SleepVisualizationTest {
         assertNull("半成品日应留空档", positions[0])
         val band = positions[1]!!
         assertTrue("完整记录应有横带", band.first >= 0f && band.second <= 1f && band.second > band.first)
+    }
+
+    // —— 工单 #12：睡眠热力图格子布局 ——
+
+    @Test
+    fun heatmapRowsAlignFirstDayToItsWeekdayColumn() {
+        // 2026-09-13 是周日；7 天窗口从周一 09-07 开始，正好一行
+        val monday = LocalDate.of(2026, 9, 7)
+        val records = (0 until 7).map { completeRecord(monday.plusDays(it.toLong()), 480) }
+        val stats = SleepVisualizationCalculator.dailyStats(records, windowDays = 7, targetMinutes = 480, today = monday.plusDays(6))
+        val rows = heatmapRows(stats)
+        assertEquals(1, rows.size)
+        assertEquals(7, rows[0].size)
+        assertEquals(monday, rows[0][0]!!.date)
+        assertEquals(monday.plusDays(6), rows[0][6]!!.date)
+    }
+
+    @Test
+    fun heatmapRowsPadLeadingBlanksAndTrailingNulls() {
+        // 2026-09-09 是周三：行首补 2 个空格；3 天数据 → 一行 7 格，尾部 2 个 null
+        val wednesday = LocalDate.of(2026, 9, 9)
+        val records = (0 until 3).map { completeRecord(wednesday.plusDays(it.toLong()), 480) }
+        val stats = SleepVisualizationCalculator.dailyStats(records, windowDays = 3, targetMinutes = 480, today = wednesday.plusDays(2))
+        val rows = heatmapRows(stats)
+        assertEquals(1, rows.size)
+        assertNull(rows[0][0])
+        assertNull(rows[0][1])
+        assertEquals(wednesday, rows[0][2]!!.date)
+        assertNull(rows[0][6])
+    }
+
+    @Test
+    fun heatmapRowsSpanMultipleWeeksFor30DayWindow() {
+        val stats = SleepVisualizationCalculator.dailyStats(emptyList(), windowDays = 30, targetMinutes = 480, today = today)
+        val rows = heatmapRows(stats)
+        assertEquals(30, rows.sumOf { it.count { cell -> cell != null } })
+        assertTrue("30 天至少跨 5 周", rows.size >= 5)
     }
 }
