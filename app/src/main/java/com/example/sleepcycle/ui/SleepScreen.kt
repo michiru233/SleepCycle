@@ -216,7 +216,7 @@ fun SleepScreen(
                 when (destination) {
                     SleepDestination.HOME -> HomeContent(uiState, viewModel, context, innerPadding)
                     SleepDestination.RECORDS -> RecordsContent(uiState, viewModel, innerPadding)
-                    SleepDestination.ANALYSIS -> AnalysisContent(uiState, innerPadding)
+                    SleepDestination.ANALYSIS -> AnalysisContent(uiState, viewModel, innerPadding)
                     SleepDestination.CHRONOTYPE -> ChronotypeContent(uiState, viewModel, context, innerPadding)
                     SleepDestination.NAPS -> NapContent(uiState, viewModel, innerPadding)
                     SleepDestination.KNOWLEDGE -> KnowledgeContent(innerPadding)
@@ -274,8 +274,18 @@ private fun RecordsContent(state: SleepUiState, viewModel: SleepViewModel, inner
 }
 
 @Composable
-private fun AnalysisContent(state: SleepUiState, innerPadding: PaddingValues) {
-    PageColumn(innerPadding) { item { SleepAnalysisSection(state) }; item { Spacer(Modifier.height(28.dp)) } }
+private fun AnalysisContent(state: SleepUiState, viewModel: SleepViewModel, innerPadding: PaddingValues) {
+    PageColumn(innerPadding) {
+        item { SleepAnalysisSection(state) }
+        item {
+            SleepVisualizationSection(
+                state = state,
+                onWindowChange = viewModel::setVisualizationWindow,
+                onDateToggle = viewModel::toggleStatDate
+            )
+        }
+        item { Spacer(Modifier.height(28.dp)) }
+    }
 }
 
 @Composable

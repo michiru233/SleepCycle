@@ -1,0 +1,213 @@
+package com.example.sleepcycle.ui
+
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import com.example.sleepcycle.model.DailySleepStat
+import com.example.sleepcycle.model.SleepGoalLevel
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+
+private val STAT_LEVEL_ON_TARGET = Color(0xFF10B981)
+private val STAT_LEVEL_NEAR_TARGET = Color(0xFFF59E0B)
+private val STAT_LEVEL_LARGE_GAP = Color(0xFF94A3B8)
+private val STAT_TARGET_LINE = Color(0xFF5E6AD2)
+private val STAT_TIME_FORMATTER = DateTimeFormatter.ofPattern("MM-dd")
+private val STAT_CLOCK_FORMATTER = DateTimeFormatter.ofPattern("HH:mm")
+
+private fun SleepGoalLevel.barColor(): Color = when (this) {
+    SleepGoalLevel.ON_TARGET -> STAT_LEVEL_ON_TARGET
+    SleepGoalLevel.NEAR_TARGET -> STAT_LEVEL_NEAR_TARGET
+    SleepGoalLevel.LARGE_GAP -> STAT_LEVEL_LARGE_GAP
+    SleepGoalLevel.NO_RECORD -> Color.Transparent
+}
+
+private fun DailySleepStat.detailText(): String = when {
+    goalLevel == SleepGoalLevel.NO_RECORD -> "$date：无完整记录"
+    else -> {
+        val hours = (primarySleepMinutes ?: 0) / 60
+        val mins = (primarySleepMinutes ?: 0) % 60
+        val duration = if (hours > 0 && mins > 0) "${hours}小时${mins}分" else if (hours > 0) "${hours}小时" else "${mins}分钟"
+        "$date：入睡 ${bedtime?.format(STAT_CLOCK_FORMATTER) ?: "--:--"} · 起床 ${wakeTime?.format(STAT_CLOCK_FORMATTER) ?: "--:--"} · 主睡眠 $duration" +
+            if (napMinutes > 0) " · 午睡 ${napMinutes}分钟" else ""
+    }
+}
+
+/** 可视化区域（睡眠分析页）：三张图共享统计窗口与点选（工单 #10-#12，词汇见 CONTEXT.md） */
+@Composable
+fun SleepVisualizationSection(
+    state: SleepUiState,
+    onWindowChange: (Int) -> Unit,
+    onDateToggle: (LocalDate) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SleepTrendCard(
+            stats = state.dailySleepStats,
+            targetMinutes = state.sleepSettings.targetMinutes,
+            windowDays = state.visualizationWindowDays,
+            selectedDate = state.selectedStatDate,
+            onWindowChange = onWindowChange,
+            onDateToggle = onDateToggle
+        )
+    }
+}
+
+/** 时长趋势柱状图：每日主睡眠柱 + 目标虚线，点选查看当日详情 */
+@Composable
+fun SleepTrendCard(
+    stats: List<DailySleepStat>,
+    targetMinutes: Int,
+    windowDays: Int,
+    selectedDate: LocalDate?,
+    onWindowChange: (Int) -> Unit,
+    onDateToggle: (LocalDate) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    GlassSurface(shape = RoundedCornerShape(16.dp), modifier = modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.BarChart, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.height(20.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("睡眠时长趋势", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.weight(1f))
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(7, 14, 30).forEach { days ->
+                    FilterChip(
+                        selected = windowDays == days,
+                        onClick = { onWindowChange(days) },
+                        label = { Text("${days}天") },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                        )
+                    )
+                }
+            }
+            if (stats.all { it.goalLevel == SleepGoalLevel.NO_RECORD }) {
+                Text(
+                    "窗口内暂无完整记录，联动写入后展示趋势",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(vertical = 24.dp)
+                )
+            } else {
+                TrendCanvas(
+                    stats = stats,
+                    targetMinutes = targetMinutes,
+                    selectedDate = selectedDate,
+                    onDateToggle = onDateToggle,
+                    modifier = Modifier.fillMaxWidth().height(170.dp)
+                )
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(stats.first().date.format(STAT_TIME_FORMATTER), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stats[stats.size / 2].date.format(STAT_TIME_FORMATTER), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stats.last().date.format(STAT_TIME_FORMATTER), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            selectedDate?.let { date ->
+                val stat = stats.firstOrNull { it.date == date }
+                if (stat != null) {
+                    Text(
+                        stat.detailText(),
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 10.dp, vertical = 8.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TrendCanvas(
+    stats: List<DailySleepStat>,
+    targetMinutes: Int,
+    selectedDate: LocalDate?,
+    onDateToggle: (LocalDate) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val barColors = stats.map { it.goalLevel.barColor() }
+    val selectionColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f)
+    Canvas(
+        modifier = modifier
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
+            .pointerInput(stats, selectedDate) {
+                detectTapGestures { offset ->
+                    val index = (offset.x / size.width * stats.size).toInt().coerceIn(0, stats.size - 1)
+                    onDateToggle(stats[index].date)
+                }
+            }
+    ) {
+        val slot = size.width / stats.size
+        val barWidth = slot * 0.62f
+        // 纵轴上限取目标与最长一天的较大值再留 15% 余量，保证目标线与柱都在可视区内
+        val maxMinutes = maxOf(targetMinutes, stats.maxOf { it.primarySleepMinutes ?: 0 }) * 1.15f
+        val drawableHeight = size.height - 12f
+
+        fun yOf(minutes: Int): Float = drawableHeight * (1f - minutes / maxMinutes)
+
+        // 目标虚线
+        val targetY = yOf(targetMinutes)
+        drawLine(
+            color = STAT_TARGET_LINE,
+            start = Offset(0f, targetY),
+            end = Offset(size.width, targetY),
+            strokeWidth = 3f,
+            pathEffect = PathEffect.dashPathEffect(floatArrayOf(14f, 10f))
+        )
+
+        stats.forEachIndexed { index, stat ->
+            val primary = stat.primarySleepMinutes ?: return@forEachIndexed
+            val left = index * slot + (slot - barWidth) / 2f
+            val top = yOf(primary)
+            drawRoundRect(
+                color = barColors[index],
+                topLeft = Offset(left, top),
+                size = Size(barWidth, drawableHeight - top),
+                cornerRadius = androidx.compose.ui.geometry.CornerRadius(8f, 8f)
+            )
+            if (stat.date == selectedDate) {
+                drawRoundRect(
+                    color = selectionColor,
+                    topLeft = Offset(left - 3f, top - 3f),
+                    size = Size(barWidth + 6f, drawableHeight - top + 6f),
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(10f, 10f),
+                    style = Stroke(width = 4f)
+                )
+            }
+        }
+    }
+}

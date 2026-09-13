@@ -28,6 +28,8 @@ import com.example.sleepcycle.model.SleepRecommendation
 import com.example.sleepcycle.model.SleepRecord
 import com.example.sleepcycle.model.SleepSettings
 import com.example.sleepcycle.model.SleepStatsCalculator
+import com.example.sleepcycle.model.SleepVisualizationCalculator
+import com.example.sleepcycle.model.DailySleepStat
 import com.example.sleepcycle.model.SocialJetLagCalculator
 import com.example.sleepcycle.model.SocialJetLagResult
 import com.example.sleepcycle.model.TwoProcessModel
@@ -101,6 +103,9 @@ data class SleepUiState(
     val sleepGapSummary: com.example.sleepcycle.model.SleepGapSummary = SleepStatsCalculator.summarize(emptyList(), SleepSettings().targetMinutes),
     val socialJetLag: SocialJetLagResult = SocialJetLagResult.Incomplete,
     val twoProcessPoints: List<TwoProcessPoint> = emptyList(),
+    val visualizationWindowDays: Int = 14,
+    val dailySleepStats: List<DailySleepStat> = emptyList(),
+    val selectedStatDate: LocalDate? = null,
     val recordDate: LocalDate = LocalDate.now().minusDays(1),
     val recordBedtime: LocalTime = LocalTime.of(23, 0),
     val recordWakeTime: LocalTime = LocalTime.of(7, 0),
@@ -224,8 +229,22 @@ class SleepViewModel(
             sleepGapSummary = SleepStatsCalculator.summarize(records, settings.targetMinutes),
             socialJetLag = SocialJetLagCalculator.calculate(records),
             twoProcessPoints = TwoProcessModel.generate(records, chronotypeProfile, LocalDateTime.now(), settings.targetMinutes),
+            dailySleepStats = SleepVisualizationCalculator.dailyStats(records, visualizationWindowDays, settings.targetMinutes),
             sleepDataError = null
         )
+    }
+
+    /** 统计窗口切换（见 CONTEXT.md）：三图共享，切换时清空点选；概要卡固定 14 天不受影响 */
+    fun setVisualizationWindow(days: Int) {
+        _uiState.update { state ->
+            state.copy(visualizationWindowDays = days, selectedStatDate = null)
+                .withSleepData(state.sleepRecords, state.sleepSettings)
+        }
+    }
+
+    /** 点选某日查看详情；再次点击取消 */
+    fun toggleStatDate(date: LocalDate) {
+        _uiState.update { it.copy(selectedStatDate = if (it.selectedStatDate == date) null else date) }
     }
 
     fun updateSleepRecordForm(
