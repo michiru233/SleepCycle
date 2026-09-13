@@ -177,6 +177,33 @@ class SleepViewModel(
     private val _napEvents = MutableSharedFlow<NapEvent>()
     val napEvents: SharedFlow<NapEvent> = _napEvents.asSharedFlow()
 
+    private val linkTimeFormatter = java.time.format.DateTimeFormatter.ofPattern("HH:mm")
+
+    /**
+     * 联动写入公共路径（设置时联动，见 CONTEXT.md）：按睡眠日找记录 → 构建并 upsert →
+     * 刷新统计状态并经 Snackbar 反馈结果。
+     */
+    private fun writeLinkageRecord(
+        sleepDay: LocalDate,
+        successMessage: (SleepRecord) -> String,
+        buildRecord: (existing: SleepRecord?) -> SleepRecord
+    ) {
+        scope.launch(Dispatchers.Unconfined) {
+            runCatching {
+                val existing = sleepRecordRepository.loadRecords().firstOrNull { it.date == sleepDay }
+                val record = buildRecord(existing)
+                sleepRecordRepository.saveRecord(record)
+                sleepRecordRepository.loadRecords() to record
+            }.onSuccess { (records, record) ->
+                _uiState.update { it.withSleepData(records, it.sleepSettings) }
+                _quickRecordEvents.emit(successMessage(record))
+            }.onFailure { error ->
+                _uiState.update { it.copy(sleepDataError = error.message ?: "睡眠记录写入失败") }
+                _quickRecordEvents.emit("睡眠记录写入失败: ${error.message}")
+            }
+        }
+    }
+
     init {
         recalculate()
         loadChronotype()
@@ -339,29 +366,17 @@ class SleepViewModel(
      * 无记录时创建半成品记录；已有醒来端时重算时长；"睡眠中"占位保持不变。
      */
     fun quickRecordBedtimePlus15(now: LocalTime = LocalTime.now(), today: LocalDate = LocalDate.now()) {
-        scope.launch(Dispatchers.Unconfined) {
-            val bedtime = now.plusMinutes(15)
-            val sleepDay = SleepRecord.sleepDayOf(now, today)
-            runCatching {
-                val existing = sleepRecordRepository.loadRecords().firstOrNull { it.date == sleepDay }
-                val wake = existing?.wakeTime
-                // primarySleepMinutes==0 是"睡眠中"占位，保持到醒来确认
-                val primary = when {
-                    wake == null -> null
-                    existing?.primarySleepMinutes == 0 -> 0
-                    else -> SleepRecord.durationBetween(bedtime, wake)
-                }
-                val record = SleepRecord(sleepDay, bedtime, wake, primary, existing?.napMinutes ?: 0)
-                sleepRecordRepository.saveRecord(record)
-                sleepRecordRepository.loadRecords() to record
-            }.onSuccess { (records, record) ->
-                _uiState.update { it.withSleepData(records, it.sleepSettings) }
-                val timeStr = record.bedtime?.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm")) ?: "--:--"
-                _quickRecordEvents.emit("已记录入睡时间 $timeStr")
-            }.onFailure { error ->
-                _uiState.update { it.copy(sleepDataError = error.message ?: "入睡时间写入失败") }
-                _quickRecordEvents.emit("记录入睡失败: ${error.message}")
+        val bedtime = now.plusMinutes(15)
+        val sleepDay = SleepRecord.sleepDayOf(now, today)
+        writeLinkageRecord(sleepDay, { record -> "已记录入睡时间 ${record.bedtime?.format(linkTimeFormatter) ?: "--:--"}" }) { existing ->
+            val wake = existing?.wakeTime
+            // primarySleepMinutes==0 是"睡眠中"占位，保持到醒来确认
+            val primary = when {
+                wake == null -> null
+                existing?.primarySleepMinutes == 0 -> 0
+                else -> SleepRecord.durationBetween(bedtime, wake)
             }
+            SleepRecord(sleepDay, bedtime, wake, primary, existing?.napMinutes ?: 0)
         }
     }
 
@@ -370,28 +385,16 @@ class SleepViewModel(
      * 与 "+15 分钟" 共用睡眠日归属；无入睡数据时保持半成品；"睡眠中"占位保持不变。
      */
     fun recordWakeAnchor(targetTime: LocalTime, now: LocalTime = LocalTime.now(), today: LocalDate = LocalDate.now()) {
-        scope.launch(Dispatchers.Unconfined) {
-            val sleepDay = SleepRecord.sleepDayOf(now, today)
-            runCatching {
-                val existing = sleepRecordRepository.loadRecords().firstOrNull { it.date == sleepDay }
-                val bedtime = existing?.bedtime
-                // primarySleepMinutes==0 是"睡眠中"占位，保持到醒来确认
-                val primary = when {
-                    bedtime == null -> null
-                    existing?.primarySleepMinutes == 0 -> 0
-                    else -> SleepRecord.durationBetween(bedtime, targetTime)
-                }
-                val record = SleepRecord(sleepDay, bedtime, targetTime, primary, existing?.napMinutes ?: 0)
-                sleepRecordRepository.saveRecord(record)
-                sleepRecordRepository.loadRecords() to record
-            }.onSuccess { (records, record) ->
-                _uiState.update { it.withSleepData(records, it.sleepSettings) }
-                val timeStr = record.wakeTime?.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm")) ?: "--:--"
-                _quickRecordEvents.emit("已记录起床时间 $timeStr，今晚入睡后自动统计")
-            }.onFailure { error ->
-                _uiState.update { it.copy(sleepDataError = error.message ?: "起床时间写入失败") }
-                _quickRecordEvents.emit("记录起床失败: ${error.message}")
+        val sleepDay = SleepRecord.sleepDayOf(now, today)
+        writeLinkageRecord(sleepDay, { record -> "已记录起床时间 ${record.wakeTime?.format(linkTimeFormatter) ?: "--:--"}，今晚入睡后自动统计" }) { existing ->
+            val bedtime = existing?.bedtime
+            // primarySleepMinutes==0 是"睡眠中"占位，保持到醒来确认
+            val primary = when {
+                bedtime == null -> null
+                existing?.primarySleepMinutes == 0 -> 0
+                else -> SleepRecord.durationBetween(bedtime, targetTime)
             }
+            SleepRecord(sleepDay, bedtime, targetTime, primary, existing?.napMinutes ?: 0)
         }
     }
 
@@ -611,7 +614,7 @@ class SleepViewModel(
         _uiState.update { it.copy(napAlarmRequest = null) }
     }
 
-    fun markNapAlarmSet() {
+    fun markNapAlarmSet(today: LocalDate = LocalDate.now()) {
         val napType = _uiState.value.selectedNapType ?: return
         _uiState.update {
             it.copy(
@@ -622,6 +625,10 @@ class SleepViewModel(
                     napType.wakeUpTip
                 }
             )
+        }
+        // 午睡锚点（见 CONTEXT.md）：闹钟 Intent 派发即"设置时"，把预设时长写入当天记录（后来者覆盖）
+        writeLinkageRecord(today, { _ -> "已记录午睡 ${napType.durationMinutes} 分钟" }) { existing ->
+            SleepRecord(today, existing?.bedtime, existing?.wakeTime, existing?.primarySleepMinutes, napMinutes = napType.durationMinutes)
         }
     }
 

@@ -1,6 +1,7 @@
 package com.example.sleepcycle
 
 import com.example.sleepcycle.data.InMemorySleepRecordRepository
+import com.example.sleepcycle.model.NapType
 import com.example.sleepcycle.model.SleepRecord
 import com.example.sleepcycle.ui.SleepViewModel
 import kotlinx.coroutines.CoroutineScope
@@ -195,6 +196,66 @@ class SleepLinkageViewModelTest {
         val viewModel = viewModel(repository)
 
         val events = snackbarEvents(viewModel) { viewModel.recordWakeAnchor(LocalTime.of(7, 0)) }
+
+        assertTrue(events.single().contains("失败"))
+    }
+
+    @Test
+    fun napAnchorWritesPresetDurationToTodayRecord() = runBlocking {
+        val repository = InMemorySleepRecordRepository()
+        val viewModel = viewModel(repository)
+        val today = LocalDate.now()
+
+        val events = snackbarEvents(viewModel) {
+            viewModel.selectNapType(NapType.TWENTY_MINUTES)
+            viewModel.markNapAlarmSet()
+        }
+
+        val record = repository.loadRecords().single()
+        assertEquals("午睡写入当天记录", today, record.date)
+        assertEquals(20, record.napMinutes)
+        assertNull("午睡不触碰主睡眠两端", record.bedtime)
+        assertTrue(events.single().contains("20"))
+    }
+
+    @Test
+    fun napAnchorOverwritesPreviousNapByLaterWins() = runBlocking {
+        val existing = SleepRecord(LocalDate.now(), null, null, null, napMinutes = 20)
+        val repository = InMemorySleepRecordRepository(listOf(existing))
+        val viewModel = viewModel(repository)
+
+        viewModel.selectNapType(NapType.ONE_CYCLE_90_MINUTES)
+        viewModel.markNapAlarmSet()
+
+        assertEquals("后来者覆盖：最新预设生效", 90, repository.loadRecords().single().napMinutes)
+    }
+
+    @Test
+    fun napAnchorPreservesMainSleepEnds() = runBlocking {
+        val today = LocalDate.now()
+        val complete = SleepRecord(today, LocalTime.of(23, 0), LocalTime.of(7, 0), 480, 0)
+        val repository = InMemorySleepRecordRepository(listOf(complete))
+        val viewModel = viewModel(repository)
+
+        viewModel.selectNapType(NapType.TWENTY_MINUTES)
+        viewModel.markNapAlarmSet()
+
+        val record = repository.loadRecords().single()
+        assertEquals(LocalTime.of(23, 0), record.bedtime)
+        assertEquals(LocalTime.of(7, 0), record.wakeTime)
+        assertEquals(480, record.primarySleepMinutes)
+        assertEquals(20, record.napMinutes)
+    }
+
+    @Test
+    fun napAnchorReportsFailureViaSnackbar() = runBlocking {
+        val repository = InMemorySleepRecordRepository(failOnWrite = true)
+        val viewModel = viewModel(repository)
+
+        val events = snackbarEvents(viewModel) {
+            viewModel.selectNapType(NapType.TWENTY_MINUTES)
+            viewModel.markNapAlarmSet()
+        }
 
         assertTrue(events.single().contains("失败"))
     }
