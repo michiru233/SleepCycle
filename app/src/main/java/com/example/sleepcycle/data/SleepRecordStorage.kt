@@ -19,19 +19,22 @@ data class SleepRecordEntity(
     val napMinutes: Int
 )
 
+// 半成品记录（缺入睡或起床一端）经哨兵值落库：schema 由 ADR-0001 冻结，非空列存 -1 表示缺端
+private const val NULL_MINUTES = -1
+
 fun SleepRecord.toEntity(): SleepRecordEntity = SleepRecordEntity(
     dateEpochDay = date.toEpochDay(),
-    bedtimeMinutes = bedtime.toMinuteOfDay(),
-    wakeTimeMinutes = wakeTime.toMinuteOfDay(),
-    primarySleepMinutes = primarySleepMinutes,
+    bedtimeMinutes = bedtime?.toMinuteOfDay() ?: NULL_MINUTES,
+    wakeTimeMinutes = wakeTime?.toMinuteOfDay() ?: NULL_MINUTES,
+    primarySleepMinutes = primarySleepMinutes ?: NULL_MINUTES,
     napMinutes = napMinutes
 )
 
 fun SleepRecordEntity.toRecord(): SleepRecord = SleepRecord(
     date = LocalDate.ofEpochDay(dateEpochDay),
-    bedtime = bedtimeMinutes.toLocalTime(),
-    wakeTime = wakeTimeMinutes.toLocalTime(),
-    primarySleepMinutes = primarySleepMinutes,
+    bedtime = bedtimeMinutes.takeIf { it != NULL_MINUTES }?.toLocalTime(),
+    wakeTime = wakeTimeMinutes.takeIf { it != NULL_MINUTES }?.toLocalTime(),
+    primarySleepMinutes = primarySleepMinutes.takeIf { it != NULL_MINUTES },
     napMinutes = napMinutes
 )
 

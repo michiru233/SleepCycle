@@ -20,6 +20,7 @@ import com.example.sleepcycle.data.SleepRecordRepository
 import com.example.sleepcycle.model.ChronotypeAnswers
 import com.example.sleepcycle.model.ChronotypeCalculator
 import com.example.sleepcycle.model.ChronotypeProfile
+import com.example.sleepcycle.model.DEFAULT_SLEEP_TARGET_MINUTES
 import com.example.sleepcycle.model.LightGuidance
 import com.example.sleepcycle.model.LightGuidanceCalculator
 import com.example.sleepcycle.model.SleepCalculator
@@ -209,12 +210,16 @@ class SleepViewModel(
             val isSleeping = candidate.primarySleepMinutes == 0
             val timeFormatter = java.time.format.DateTimeFormatter.ofPattern("HH:mm")
             val statusText = if (isSleeping) {
-                "已记录入睡 ${candidate.bedtime.format(timeFormatter)} · 睡眠中..."
+                "已记录入睡 ${candidate.bedtime?.format(timeFormatter) ?: "--:--"} · 睡眠中..."
+            } else if (!candidate.isComplete) {
+                // 半成品记录：联动已写入一端，等待补全
+                "已记录起床锚点 · 待补全入睡信息"
             } else {
-                val hours = candidate.primarySleepMinutes / 60
-                val mins = candidate.primarySleepMinutes % 60
+                val primary = candidate.primarySleepMinutes ?: 0
+                val hours = primary / 60
+                val mins = primary % 60
                 val durationDesc = if (hours > 0 && mins > 0) "${hours}小时${mins}分" else if (hours > 0) "${hours}小时" else "${mins}分钟"
-                "入睡 ${candidate.bedtime.format(timeFormatter)} · 醒来 ${candidate.wakeTime.format(timeFormatter)} ($durationDesc)"
+                "入睡 ${candidate.bedtime?.format(timeFormatter) ?: "--:--"} · 醒来 ${candidate.wakeTime?.format(timeFormatter) ?: "--:--"} ($durationDesc)"
             }
             QuickRecordSummary(
                 lastBedtime = candidate.bedtime,
@@ -252,13 +257,19 @@ class SleepViewModel(
             runCatching { sleepRecordRepository.getRecord(date) }
                 .onSuccess { record ->
                     if (record != null) _uiState.update {
+                        // 半成品记录编辑时用默认值补全缺失端（表单可见、可改），保存后覆盖
+                        val defaultBedtime = record.bedtime ?: LocalTime.of(23, 0)
+                        val defaultWakeTime = record.wakeTime ?: LocalTime.of(7, 0)
+                        val defaultPrimary = record.primarySleepMinutes
+                            ?: record.clockDurationMinutes
+                            ?: DEFAULT_SLEEP_TARGET_MINUTES
                         it.copy(
                             recordDate = record.date,
-                            recordBedtime = record.bedtime,
-                            recordWakeTime = record.wakeTime,
-                            recordPrimarySleepMinutes = record.primarySleepMinutes,
+                            recordBedtime = defaultBedtime,
+                            recordWakeTime = defaultWakeTime,
+                            recordPrimarySleepMinutes = defaultPrimary,
                             recordNapMinutes = record.napMinutes,
-                            editingSleepRecord = SleepRecordDraft(record.date, record.bedtime, record.wakeTime, record.primarySleepMinutes, record.napMinutes),
+                            editingSleepRecord = SleepRecordDraft(record.date, defaultBedtime, defaultWakeTime, defaultPrimary, record.napMinutes),
                             recordSaveState = SleepRecordSaveState.Idle
                         )
                     }
@@ -290,7 +301,8 @@ class SleepViewModel(
         val state = _uiState.value
         val primaryMinutes = state.recordPrimarySleepMinutes
         val napMinutes = state.recordNapMinutes
-        if (state.recordDate.isAfter(LocalDate.now()) || primaryMinutes !in 1..SleepRecord.MINUTES_PER_DAY || napMinutes !in 0..SleepRecord.MINUTES_PER_DAY) {
+        // 睡眠日最晚允许到明天（晚间设闹钟归属次日）
+        if (state.recordDate.isAfter(LocalDate.now().plusDays(1)) || primaryMinutes !in 1..SleepRecord.MINUTES_PER_DAY || napMinutes !in 0..SleepRecord.MINUTES_PER_DAY) {
             _uiState.update { it.copy(recordSaveState = SleepRecordSaveState.Error("日期或午睡分钟数无效")) }
             return
         }
@@ -329,13 +341,10 @@ class SleepViewModel(
         scope.launch(Dispatchers.Unconfined) {
             val records = sleepRecordRepository.loadRecords()
             val existing = records.firstOrNull { it.date == today }
-            val placeholderWakeTime = if (existing != null && existing.wakeTime != now) {
-                existing.wakeTime
-            } else {
-                now.plusHours(8)
-            }
-            val primaryMinutes = if (existing != null && existing.primarySleepMinutes > 0 && existing.wakeTime != now) {
-                SleepRecord.durationBetween(now, existing.wakeTime)
+            val existingWake = existing?.wakeTime
+            val placeholderWakeTime = existingWake?.takeIf { it != now } ?: now.plusHours(8)
+            val primaryMinutes = if (existingWake != null && existingWake != now && (existing?.primarySleepMinutes ?: 0) > 0) {
+                SleepRecord.durationBetween(now, existingWake)
             } else {
                 0
             }

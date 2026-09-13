@@ -22,25 +22,34 @@ data class SleepSettings(val targetMinutes: Int = DEFAULT_SLEEP_TARGET_MINUTES) 
     }
 }
 
+// 半成品记录（联动先写入一端，见 CONTEXT.md）：bedtime/wakeTime/primarySleepMinutes 可空
 data class SleepRecord(
     val date: LocalDate,
-    val bedtime: LocalTime,
-    val wakeTime: LocalTime,
-    val primarySleepMinutes: Int,
+    val bedtime: LocalTime?,
+    val wakeTime: LocalTime?,
+    val primarySleepMinutes: Int?,
     val napMinutes: Int = 0
 ) {
     init {
-        require(!date.isAfter(LocalDate.now())) { "不允许记录未来日期" }
-        require(bedtime != wakeTime) { "入睡和起床时间不能相同" }
-        require(primarySleepMinutes in 0..SleepRecord.MINUTES_PER_DAY) { "主睡眠分钟数无效" }
+        // 联动允许写入次日的睡眠日（晚间设闹钟归次日），最晚到明天
+        require(!date.isAfter(LocalDate.now().plusDays(1))) { "记录最晚允许到明天" }
+        require(bedtime == null || wakeTime == null || bedtime != wakeTime) { "入睡和起床时间不能相同" }
+        require(primarySleepMinutes == null || primarySleepMinutes in 0..SleepRecord.MINUTES_PER_DAY) { "主睡眠分钟数无效" }
         require(napMinutes in 0..SleepRecord.MINUTES_PER_DAY) { "午睡分钟数无效" }
     }
 
-    val clockDurationMinutes: Int
-        get() = durationBetween(bedtime, wakeTime)
+    val isComplete: Boolean
+        get() = bedtime != null && wakeTime != null
 
-    val midpointMinutes: Int
-        get() = (bedtime.toMinuteOfDay() + clockDurationMinutes / 2).mod(MINUTES_PER_DAY)
+    // 统计口径的主睡眠时长：优先用户/联动写入值，齐全记录缺值时按时钟区间回退
+    val effectivePrimarySleepMinutes: Int?
+        get() = primarySleepMinutes ?: clockDurationMinutes
+
+    val clockDurationMinutes: Int?
+        get() = if (isComplete) durationBetween(bedtime!!, wakeTime!!) else null
+
+    val midpointMinutes: Int?
+        get() = clockDurationMinutes?.let { (bedtime!!.toMinuteOfDay() + it / 2).mod(MINUTES_PER_DAY) }
 
     val isWeekend: Boolean
         get() = date.dayOfWeek == DayOfWeek.SATURDAY || date.dayOfWeek == DayOfWeek.SUNDAY
@@ -74,36 +83,39 @@ sealed class SocialJetLagResult {
 }
 
 object SleepStatsCalculator {
+    // 统计窗口内、按日期去重的齐全记录（半成品记录不计入统计，见 CONTEXT.md）
+    internal fun recentCompleteRecords(records: List<SleepRecord>, today: LocalDate): Collection<SleepRecord> {
+        val start = today.minusDays(SLEEP_STATS_DAYS.toLong())
+        return records.filter { it.date >= start && it.date < today && it.isComplete }
+            .associateBy { it.date }
+            .values
+    }
+
     fun summarize(
         records: List<SleepRecord>,
         targetMinutes: Int,
         today: LocalDate = LocalDate.now()
     ): SleepGapSummary {
         require(SleepSettings(targetMinutes).targetMinutes == targetMinutes)
-        val start = today.minusDays(SLEEP_STATS_DAYS.toLong())
-        val recent = records.filter { it.date >= start && it.date < today }
-            .associateBy { it.date }
-            .values
-        val gap = recent.sumOf { (targetMinutes - it.primarySleepMinutes - it.napMinutes).coerceAtLeast(0) }
+        val recent = recentCompleteRecords(records, today)
+        val gap = recent.sumOf { (targetMinutes - (it.effectivePrimarySleepMinutes ?: 0) - it.napMinutes).coerceAtLeast(0) }
         return SleepGapSummary(
             estimatedGapMinutes = gap,
             recordedDays = recent.map { it.date }.distinct().size,
-            averagePrimarySleepMinutes = if (recent.isEmpty()) 0 else recent.sumOf { it.primarySleepMinutes } / recent.size
+            averagePrimarySleepMinutes = if (recent.isEmpty()) 0 else recent.sumOf { it.effectivePrimarySleepMinutes ?: 0 } / recent.size
         )
     }
 }
 
 object SocialJetLagCalculator {
     fun calculate(records: List<SleepRecord>, today: LocalDate = LocalDate.now()): SocialJetLagResult {
-        val start = today.minusDays(SLEEP_STATS_DAYS.toLong())
-        val recent = records.filter { it.date >= start && it.date < today }
-            .associateBy { it.date }
-            .values
+        // 半成品记录没有中点，不参与社交时差
+        val recent = SleepStatsCalculator.recentCompleteRecords(records, today)
         val workdays = recent.filter { !it.isWeekend }
         val freeDays = recent.filter { it.isWeekend }
         if (workdays.size < 2 || freeDays.size < 2) return SocialJetLagResult.Incomplete
-        val workMidpoint = circularMean(workdays.map { it.midpointMinutes })
-        val freeMidpoint = circularMean(freeDays.map { it.midpointMinutes })
+        val workMidpoint = circularMean(workdays.map { it.midpointMinutes!! })
+        val freeMidpoint = circularMean(freeDays.map { it.midpointMinutes!! })
         val signedDifference = shortestClockDifference(workMidpoint, freeMidpoint)
         return SocialJetLagResult.Complete(workMidpoint, freeMidpoint, abs(signedDifference))
     }
@@ -144,7 +156,8 @@ object TwoProcessModel {
         start: java.time.LocalDateTime,
         targetMinutes: Int = DEFAULT_SLEEP_TARGET_MINUTES
     ): List<TwoProcessPoint> {
-        val latest = records.maxByOrNull { it.date }
+        // 只用齐全记录推睡眠窗口；半成品记录缺一端无法建模
+        val latest = records.filter { it.isComplete }.maxByOrNull { it.date }
         val phase = chronotype?.midpointMinutes ?: DEFAULT_PHASE_MINUTES
         val sleepStart = latest?.bedtime?.toMinuteOfDay()
             ?: (start.toLocalTime().toMinuteOfDay() - targetMinutes).mod(SleepRecord.MINUTES_PER_DAY)

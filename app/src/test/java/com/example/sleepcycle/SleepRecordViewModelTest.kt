@@ -96,9 +96,8 @@ class SleepRecordViewModelTest {
     fun quickRecordBedtimeAndWakeTimeComputesDurationCorrectly() = runBlocking {
         val repository = InMemorySleepRecordRepository()
         val viewModel = viewModel(repository)
-        val today = LocalDate.of(2026, 9, 7)
-
-        // 晚上 23:30 打卡入睡
+        // withSleepData 的摘要按真实“今天”匹配记录，因此用动态日期避免日期敏感
+        val today = LocalDate.now()
         viewModel.quickRecordBedtime(now = LocalTime.of(23, 30), today = today)
         var records = repository.loadRecords()
         assertEquals(1, records.size)
@@ -128,7 +127,7 @@ class SleepRecordViewModelTest {
     fun quickRecordWakeTimeWithoutPriorBedtimeUsesDefaultBedtime() = runBlocking {
         val repository = InMemorySleepRecordRepository()
         val viewModel = viewModel(repository)
-        val today = LocalDate.of(2026, 9, 7)
+        val today = LocalDate.now()
 
         // 没有打卡入睡，直接打卡醒来 08:00
         viewModel.quickRecordWakeTime(now = LocalTime.of(8, 0), today = today)

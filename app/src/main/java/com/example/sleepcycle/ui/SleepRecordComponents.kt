@@ -125,7 +125,7 @@ fun SleepRecordSection(
             if (state.sleepRecords.isNotEmpty()) {
                 state.sleepRecords.take(3).forEach { record ->
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                        Text("${record.date}  ${record.primarySleepMinutes} 分钟", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
+                        Text("${record.date}  ${record.primarySleepMinutes?.let { "$it 分钟" } ?: "未完成"}", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
                         IconButton(onClick = { onEdit(record.date) }) { Icon(Icons.Default.Edit, contentDescription = "编辑 ${record.date}") }
                     }
                 }
