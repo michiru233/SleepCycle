@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.NightsStay
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
@@ -32,6 +33,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.sleepcycle.model.DailySleepStat
 import com.example.sleepcycle.model.SleepGoalLevel
+import com.example.sleepcycle.model.bandAxis
+import com.example.sleepcycle.model.bandPositions
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -75,6 +78,12 @@ fun SleepVisualizationSection(
             windowDays = state.visualizationWindowDays,
             selectedDate = state.selectedStatDate,
             onWindowChange = onWindowChange,
+            onDateToggle = onDateToggle
+        )
+        SleepBandCard(
+            stats = state.dailySleepStats,
+            windowDays = state.visualizationWindowDays,
+            selectedDate = state.selectedStatDate,
             onDateToggle = onDateToggle
         )
     }
@@ -150,6 +159,101 @@ fun SleepTrendCard(
         }
     }
 }
+
+/** 作息带状图（工单 #11）：每日一条入睡→起床横带，跨午夜对齐，直观看作息漂移 */
+@Composable
+fun SleepBandCard(
+    stats: List<DailySleepStat>,
+    windowDays: Int,
+    selectedDate: LocalDate?,
+    onDateToggle: (LocalDate) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val completeStats = stats.filter { it.bedtime != null && it.wakeTime != null }
+    GlassSurface(shape = RoundedCornerShape(16.dp), modifier = modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.NightsStay, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.height(20.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("作息带状图", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.weight(1f))
+                Text("最近${windowDays}天", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            if (completeStats.isEmpty()) {
+                Text(
+                    "窗口内暂无完整记录，联动写入后展示作息区间",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(vertical = 24.dp)
+                )
+            } else {
+                val axis = bandAxis(stats)!!
+                val positions = bandPositions(axis, stats)
+                val axisStart = axis.startMinutes.mod(24 * 60)
+                val axisEnd = axis.endMinutes.mod(24 * 60)
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(formatAxisClock(axisStart), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(formatAxisClock(axisEnd), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                val rowHeightPx = 34f
+                val canvasHeightDp = ((stats.size * rowHeightPx) / 3f).dp
+                val bandColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.75f)
+                val selectionColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f)
+                Canvas(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(canvasHeightDp)
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
+                        .pointerInput(stats, selectedDate) {
+                            detectTapGestures { offset ->
+                                val index = (offset.y / size.height * stats.size).toInt().coerceIn(0, stats.size - 1)
+                                onDateToggle(stats[index].date)
+                            }
+                        }
+                ) {
+                    val rowHeight = size.height / stats.size
+                    val bandHeight = rowHeight * 0.5f
+                    stats.forEachIndexed { index, stat ->
+                        val position = positions[index] ?: return@forEachIndexed
+                        val rowTop = index * rowHeight + (rowHeight - bandHeight) / 2f
+                        drawRoundRect(
+                            color = bandColor,
+                            topLeft = Offset(position.first * size.width, rowTop),
+                            size = Size((position.second - position.first) * size.width, bandHeight),
+                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(10f, 10f)
+                        )
+                        if (stat.date == selectedDate) {
+                            drawRoundRect(
+                                color = selectionColor,
+                                topLeft = Offset(position.first * size.width - 3f, rowTop - 3f),
+                                size = Size((position.second - position.first) * size.width + 6f, bandHeight + 6f),
+                                cornerRadius = androidx.compose.ui.geometry.CornerRadius(12f, 12f),
+                                style = Stroke(width = 4f)
+                            )
+                        }
+                    }
+                }
+            }
+            selectedDate?.let { date ->
+                val stat = stats.firstOrNull { it.date == date }
+                if (stat != null) {
+                    Text(
+                        stat.detailText(),
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 10.dp, vertical = 8.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+private fun formatAxisClock(minutes: Int): String = "%02d:%02d".format(minutes / 60, minutes % 60)
 
 @Composable
 private fun TrendCanvas(
