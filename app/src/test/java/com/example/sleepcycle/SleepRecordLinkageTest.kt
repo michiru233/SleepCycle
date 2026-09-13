@@ -89,6 +89,12 @@ class SleepRecordLinkageTest {
     }
 
     @Test
+    fun sleepDayBoundaryAtSixOclock() {
+        assertEquals("5:59 属凌晨，归当天", today, SleepRecord.sleepDayOf(LocalTime.of(5, 59), today))
+        assertEquals("6:00 起属晚间，归次日", today.plusDays(1), SleepRecord.sleepDayOf(LocalTime.of(6, 0), today))
+    }
+
+    @Test
     fun socialJetLagIgnoresHalfRecords() {
         val completeWorkday = SleepRecord(today.minusDays(2), LocalTime.of(23, 0), LocalTime.of(7, 0), 480)
         val halfRecord = SleepRecord(today.minusDays(1), null, LocalTime.of(6, 0), null)

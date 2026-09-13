@@ -129,4 +129,73 @@ class SleepLinkageViewModelTest {
 
         assertTrue(events.single().contains("失败"))
     }
+
+    @Test
+    fun wakeAnchorCreatesHalfRecordOnNextSleepDayForEveningSet() = runBlocking {
+        val repository = InMemorySleepRecordRepository()
+        val viewModel = viewModel(repository)
+        val today = LocalDate.now()
+
+        val events = snackbarEvents(viewModel) { viewModel.recordWakeAnchor(LocalTime.of(7, 0), now = LocalTime.of(23, 0), today = today) }
+
+        val record = repository.loadRecords().single()
+        assertEquals("晚间设闹钟归属次日睡眠日", today.plusDays(1), record.date)
+        assertEquals(LocalTime.of(7, 0), record.wakeTime)
+        assertNull("尚无入睡数据时应保持半成品记录", record.bedtime)
+        assertNull(record.primarySleepMinutes)
+        assertTrue(events.single().contains("07:00"))
+    }
+
+    @Test
+    fun wakeAnchorCompletesBedtimeOnlyHalfRecordWithCrossMidnightDuration() = runBlocking {
+        val sleepDay = LocalDate.now().plusDays(1)
+        val bedtimeOnly = SleepRecord(sleepDay, LocalTime.of(23, 15), null, null, 0)
+        val repository = InMemorySleepRecordRepository(listOf(bedtimeOnly))
+        val viewModel = viewModel(repository)
+
+        snackbarEvents(viewModel) { viewModel.recordWakeAnchor(LocalTime.of(7, 0), now = LocalTime.of(23, 30), today = sleepDay.minusDays(1)) }
+
+        val record = repository.loadRecords().single()
+        assertEquals(LocalTime.of(23, 15), record.bedtime)
+        assertEquals(LocalTime.of(7, 0), record.wakeTime)
+        assertEquals("23:15 到 07:00 跨午夜 465 分钟", 465, record.primarySleepMinutes)
+    }
+
+    @Test
+    fun wakeAnchorAttributesToCurrentDayWhenSetAfterMidnight() = runBlocking {
+        val repository = InMemorySleepRecordRepository()
+        val viewModel = viewModel(repository)
+        val today = LocalDate.now()
+
+        viewModel.recordWakeAnchor(LocalTime.of(7, 0), now = LocalTime.of(0, 30), today = today)
+
+        val record = repository.loadRecords().single()
+        assertEquals("凌晨（已在睡眠中）设闹钟归属当天", today, record.date)
+        assertEquals(LocalTime.of(7, 0), record.wakeTime)
+    }
+
+    @Test
+    fun wakeAnchorKeepsSleepingPlaceholderState() = runBlocking {
+        val sleepDay = LocalDate.now().plusDays(1)
+        val sleeping = SleepRecord(sleepDay, LocalTime.of(23, 0), LocalTime.of(6, 30), 0, 0)
+        val repository = InMemorySleepRecordRepository(listOf(sleeping))
+        val viewModel = viewModel(repository)
+
+        viewModel.recordWakeAnchor(LocalTime.of(7, 0), now = LocalTime.of(22, 0), today = sleepDay.minusDays(1))
+
+        val record = repository.loadRecords().single()
+        assertEquals("睡眠中状态由醒来确认结束，设闹钟只更新起床端", 0, record.primarySleepMinutes)
+        assertEquals(LocalTime.of(7, 0), record.wakeTime)
+        assertEquals(LocalTime.of(23, 0), record.bedtime)
+    }
+
+    @Test
+    fun wakeAnchorReportsFailureViaSnackbar() = runBlocking {
+        val repository = InMemorySleepRecordRepository(failOnWrite = true)
+        val viewModel = viewModel(repository)
+
+        val events = snackbarEvents(viewModel) { viewModel.recordWakeAnchor(LocalTime.of(7, 0)) }
+
+        assertTrue(events.single().contains("失败"))
+    }
 }

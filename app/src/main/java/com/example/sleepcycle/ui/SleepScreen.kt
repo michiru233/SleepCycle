@@ -259,6 +259,10 @@ private fun HomeContent(state: SleepUiState, viewModel: SleepViewModel, context:
             ModernRecommendationCard(recommendation = rec, mode = state.selectedMode, onSetAlarm = {
                 val message = when (state.selectedMode) { CalculationMode.PLAN_WAKEUP -> "睡眠周期提示: 准备上床入睡"; else -> "SleepCycle 浅睡智能唤醒 (${rec.cycleCount}个周期)" }
                 AlarmIntentManager.setAlarm(context, rec.targetTime, message)
+                // 起床锚点：仅当卡片给出的是起床时间时写入记录；计划起床模式是就寝提醒，不碰数据
+                if (state.selectedMode != CalculationMode.PLAN_WAKEUP) {
+                    viewModel.recordWakeAnchor(rec.targetTime)
+                }
                 viewModel.showSleepInertiaGuidance()
             })
         }
