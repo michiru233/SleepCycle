@@ -244,7 +244,7 @@ private fun HomeContent(state: SleepUiState, viewModel: SleepViewModel, context:
             )
         }
         item { Spacer(Modifier.height(2.dp)); SmoothModeSelector(selectedMode = state.selectedMode, onModeSelected = viewModel::onModeSelected) }
-        item { ModernTimeSelectionCard(mode = state.selectedMode, selectedTime = state.selectedTime, latencyMinutes = state.latencyMinutes, onTimePicked = viewModel::onTimeSelected, onLatencyChanged = viewModel::onLatencyChanged, onRefreshTime = viewModel::refreshCurrentTime) }
+        item { ModernTimeSelectionCard(mode = state.selectedMode, selectedTime = state.selectedTime, latencyMinutes = state.latencyMinutes, onTimePicked = viewModel::onTimeSelected, onLatencyChanged = viewModel::onLatencyChanged, onRefreshTime = viewModel::refreshCurrentTime, onBedtimePlus15 = { viewModel.quickRecordBedtimePlus15() }) }
         item {
             val headerText = when (state.selectedMode) {
                 CalculationMode.SLEEP_NOW -> "推荐闹钟时间 (若现在入睡)"

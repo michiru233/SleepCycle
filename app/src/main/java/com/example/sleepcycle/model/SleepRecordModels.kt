@@ -57,10 +57,17 @@ data class SleepRecord(
     companion object {
         const val MINUTES_PER_DAY = 24 * 60
 
-        fun durationBetween(bedtime: LocalTime, wakeTime: LocalTime): Int {
-            val difference = wakeTime.toMinuteOfDay() - bedtime.toMinuteOfDay()
-            return if (difference <= 0) difference + MINUTES_PER_DAY else difference
-        }
+    fun durationBetween(bedtime: LocalTime, wakeTime: LocalTime): Int {
+        val difference = wakeTime.toMinuteOfDay() - bedtime.toMinuteOfDay()
+        return if (difference <= 0) difference + MINUTES_PER_DAY else difference
+    }
+
+    /**
+     * 睡眠日归属（见 CONTEXT.md）：凌晨（6 点前，已在睡眠中）设定归当天，其余时段设定归次日。
+     * "+15 分钟"入睡写入与起床锚点闹钟写入共用此规则，保证同一晚的两端落在同一条记录上。
+     */
+    fun sleepDayOf(setAt: LocalTime, date: LocalDate): LocalDate =
+        if (setAt.hour < 6) date else date.plusDays(1)
     }
 }
 

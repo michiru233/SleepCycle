@@ -335,6 +335,37 @@ class SleepViewModel(
     }
 
     /**
+     * "+15 分钟"快捷入睡：当前时刻推后 15 分钟写入对应睡眠日的记录（后来者覆盖，见 CONTEXT.md）。
+     * 无记录时创建半成品记录；已有醒来端时重算时长；"睡眠中"占位保持不变。
+     */
+    fun quickRecordBedtimePlus15(now: LocalTime = LocalTime.now(), today: LocalDate = LocalDate.now()) {
+        scope.launch(Dispatchers.Unconfined) {
+            val bedtime = now.plusMinutes(15)
+            val sleepDay = SleepRecord.sleepDayOf(now, today)
+            runCatching {
+                val existing = sleepRecordRepository.loadRecords().firstOrNull { it.date == sleepDay }
+                val wake = existing?.wakeTime
+                // primarySleepMinutes==0 是"睡眠中"占位，保持到醒来确认
+                val primary = when {
+                    wake == null -> null
+                    existing?.primarySleepMinutes == 0 -> 0
+                    else -> SleepRecord.durationBetween(bedtime, wake)
+                }
+                val record = SleepRecord(sleepDay, bedtime, wake, primary, existing?.napMinutes ?: 0)
+                sleepRecordRepository.saveRecord(record)
+                sleepRecordRepository.loadRecords() to record
+            }.onSuccess { (records, record) ->
+                _uiState.update { it.withSleepData(records, it.sleepSettings) }
+                val timeStr = record.bedtime?.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm")) ?: "--:--"
+                _quickRecordEvents.emit("已记录入睡时间 $timeStr")
+            }.onFailure { error ->
+                _uiState.update { it.copy(sleepDataError = error.message ?: "入睡时间写入失败") }
+                _quickRecordEvents.emit("记录入睡失败: ${error.message}")
+            }
+        }
+    }
+
+    /**
      * 快速打卡：“我睡了”
      */
     fun quickRecordBedtime(now: LocalTime = LocalTime.now(), today: LocalDate = LocalDate.now()) {
