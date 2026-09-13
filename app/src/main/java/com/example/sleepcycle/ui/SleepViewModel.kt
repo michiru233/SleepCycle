@@ -80,16 +80,6 @@ sealed class UpdateEvent {
     data class Error(val message: String) : UpdateEvent()
 }
 
-/**
- * 快速打卡状态摘要
- */
-data class QuickRecordSummary(
-    val lastBedtime: LocalTime? = null,
-    val lastWakeTime: LocalTime? = null,
-    val isSleeping: Boolean = false,
-    val statusText: String = "今日尚未打卡睡眠"
-)
-
 data class SleepUiState(
     val selectedMode: CalculationMode = CalculationMode.SLEEP_NOW,
     val selectedTime: LocalTime = LocalTime.of(23, 0),
@@ -111,7 +101,6 @@ data class SleepUiState(
     val sleepGapSummary: com.example.sleepcycle.model.SleepGapSummary = SleepStatsCalculator.summarize(emptyList(), SleepSettings().targetMinutes),
     val socialJetLag: SocialJetLagResult = SocialJetLagResult.Incomplete,
     val twoProcessPoints: List<TwoProcessPoint> = emptyList(),
-    val quickRecordSummary: QuickRecordSummary = QuickRecordSummary(),
     val recordDate: LocalDate = LocalDate.now().minusDays(1),
     val recordBedtime: LocalTime = LocalTime.of(23, 0),
     val recordWakeTime: LocalTime = LocalTime.of(7, 0),
@@ -229,42 +218,12 @@ class SleepViewModel(
         settings: SleepSettings,
         chronotypeProfile: ChronotypeProfile? = this.chronotypeProfile
     ): SleepUiState {
-        val today = LocalDate.now()
-        val yesterday = today.minusDays(1)
-        // 查找今日或昨日的最新记录生成快速打卡摘要
-        val candidate = records.firstOrNull { it.date == today } ?: records.firstOrNull { it.date == yesterday }
-        val summary = if (candidate != null) {
-            val isSleeping = candidate.primarySleepMinutes == 0
-            val timeFormatter = java.time.format.DateTimeFormatter.ofPattern("HH:mm")
-            val statusText = if (isSleeping) {
-                "已记录入睡 ${candidate.bedtime?.format(timeFormatter) ?: "--:--"} · 睡眠中..."
-            } else if (!candidate.isComplete) {
-                // 半成品记录：联动已写入一端，等待补全
-                "已记录起床锚点 · 待补全入睡信息"
-            } else {
-                val primary = candidate.primarySleepMinutes ?: 0
-                val hours = primary / 60
-                val mins = primary % 60
-                val durationDesc = if (hours > 0 && mins > 0) "${hours}小时${mins}分" else if (hours > 0) "${hours}小时" else "${mins}分钟"
-                "入睡 ${candidate.bedtime?.format(timeFormatter) ?: "--:--"} · 醒来 ${candidate.wakeTime?.format(timeFormatter) ?: "--:--"} ($durationDesc)"
-            }
-            QuickRecordSummary(
-                lastBedtime = candidate.bedtime,
-                lastWakeTime = if (isSleeping) null else candidate.wakeTime,
-                isSleeping = isSleeping,
-                statusText = statusText
-            )
-        } else {
-            QuickRecordSummary(statusText = "今日尚未打卡睡眠")
-        }
-
         return copy(
             sleepRecords = records,
             sleepSettings = settings,
             sleepGapSummary = SleepStatsCalculator.summarize(records, settings.targetMinutes),
             socialJetLag = SocialJetLagCalculator.calculate(records),
             twoProcessPoints = TwoProcessModel.generate(records, chronotypeProfile, LocalDateTime.now(), settings.targetMinutes),
-            quickRecordSummary = summary,
             sleepDataError = null
         )
     }
@@ -382,83 +341,6 @@ class SleepViewModel(
                 SleepRecord.durationBetween(bedtime, targetTime)
             }
             SleepRecord(sleepDay, bedtime, targetTime, primary, existing?.napMinutes ?: 0)
-        }
-    }
-
-    /**
-     * 快速打卡：“我睡了”
-     */
-    fun quickRecordBedtime(now: LocalTime = LocalTime.now(), today: LocalDate = LocalDate.now()) {
-        scope.launch(Dispatchers.Unconfined) {
-            val records = sleepRecordRepository.loadRecords()
-            val existing = records.firstOrNull { it.date == today }
-            val existingWake = existing?.wakeTime
-            val placeholderWakeTime = existingWake?.takeIf { it != now } ?: now.plusHours(8)
-            val primaryMinutes = if (existingWake != null && existingWake != now && (existing?.primarySleepMinutes ?: 0) > 0) {
-                SleepRecord.durationBetween(now, existingWake)
-            } else {
-                0
-            }
-            val newRecord = SleepRecord(
-                date = today,
-                bedtime = now,
-                wakeTime = placeholderWakeTime,
-                primarySleepMinutes = primaryMinutes,
-                napMinutes = existing?.napMinutes ?: 0
-            )
-            runCatching {
-                sleepRecordRepository.saveRecord(newRecord)
-                sleepRecordRepository.loadRecords()
-            }.onSuccess { updatedRecords ->
-                _uiState.update { it.withSleepData(updatedRecords, it.sleepSettings) }
-                val timeStr = now.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
-                _quickRecordEvents.emit("已记录入睡时间 $timeStr")
-            }.onFailure { error ->
-                _uiState.update { it.copy(sleepDataError = error.message ?: "入睡记录保存失败") }
-                _quickRecordEvents.emit("记录入睡失败: ${error.message}")
-            }
-        }
-    }
-
-    /**
-     * 快速打卡：“我醒了”
-     */
-    fun quickRecordWakeTime(now: LocalTime = LocalTime.now(), today: LocalDate = LocalDate.now()) {
-        scope.launch(Dispatchers.Unconfined) {
-            val records = sleepRecordRepository.loadRecords()
-            val yesterday = today.minusDays(1)
-            // 优先匹配当天的入睡打卡（如凌晨入睡），若无则匹配昨天的入睡打卡
-            val candidate = records.firstOrNull { it.date == today && it.primarySleepMinutes == 0 }
-                ?: records.firstOrNull { it.date == yesterday && it.primarySleepMinutes == 0 }
-                ?: records.firstOrNull { it.date == yesterday }
-                ?: records.firstOrNull { it.date == today }
-
-            val targetDate = candidate?.date ?: yesterday
-            val bedtime = candidate?.bedtime ?: LocalTime.of(23, 0)
-            val placeholderWakeTime = if (bedtime == now) now.plusMinutes(1) else now
-            val primaryMinutes = SleepRecord.durationBetween(bedtime, placeholderWakeTime)
-            val updatedRecord = SleepRecord(
-                date = targetDate,
-                bedtime = bedtime,
-                wakeTime = placeholderWakeTime,
-                primarySleepMinutes = primaryMinutes,
-                napMinutes = candidate?.napMinutes ?: 0
-            )
-
-            runCatching {
-                sleepRecordRepository.saveRecord(updatedRecord)
-                sleepRecordRepository.loadRecords()
-            }.onSuccess { updatedRecords ->
-                _uiState.update { it.withSleepData(updatedRecords, it.sleepSettings) }
-                val timeStr = now.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
-                val hours = primaryMinutes / 60
-                val mins = primaryMinutes % 60
-                val durationStr = if (hours > 0 && mins > 0) "${hours}小时${mins}分" else if (hours > 0) "${hours}小时" else "${mins}分钟"
-                _quickRecordEvents.emit("已记录醒来 $timeStr (睡眠时长 $durationStr)")
-            }.onFailure { error ->
-                _uiState.update { it.copy(sleepDataError = error.message ?: "醒来记录保存失败") }
-                _quickRecordEvents.emit("记录醒来失败: ${error.message}")
-            }
         }
     }
 
@@ -701,7 +583,7 @@ class SleepViewModel(
     }
 
     companion object {
-        const val CURRENT_APP_VERSION = "1.10.1"
+        const val CURRENT_APP_VERSION = "1.10.2"
 
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {

@@ -236,14 +236,7 @@ private fun PageColumn(innerPadding: PaddingValues, content: LazyListScope.() ->
 @Composable
 private fun HomeContent(state: SleepUiState, viewModel: SleepViewModel, context: android.content.Context, innerPadding: PaddingValues) {
     PageColumn(innerPadding) {
-        item {
-            QuickRecordCard(
-                summary = state.quickRecordSummary,
-                onRecordBedtime = { viewModel.quickRecordBedtime() },
-                onRecordWakeTime = { viewModel.quickRecordWakeTime() }
-            )
-        }
-        item { Spacer(Modifier.height(2.dp)); SmoothModeSelector(selectedMode = state.selectedMode, onModeSelected = viewModel::onModeSelected) }
+        item { SmoothModeSelector(selectedMode = state.selectedMode, onModeSelected = viewModel::onModeSelected) }
         item { ModernTimeSelectionCard(mode = state.selectedMode, selectedTime = state.selectedTime, latencyMinutes = state.latencyMinutes, onTimePicked = viewModel::onTimeSelected, onLatencyChanged = viewModel::onLatencyChanged, onRefreshTime = viewModel::refreshCurrentTime) }
         item {
             val headerText = when (state.selectedMode) {
