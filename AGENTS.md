@@ -21,3 +21,17 @@
      ```bash
      gh release create v<版本号> SleepCycle-v<版本号>.apk --title "v<版本号> - <更新简述>" --notes "<更新日志>"
      ```
+
+## Agent skills
+
+### Issue tracker
+
+Issues live in GitHub Issues on `michiru233/SleepCycle`, managed with the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Uses the five canonical triage roles as label strings (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context layout: root `CONTEXT.md` + `docs/adr/`, created lazily by `/domain-modeling`. See `docs/agents/domain.md`.
