@@ -13,8 +13,8 @@ android {
         applicationId = "com.example.sleepcycle"
         minSdk = 31
         targetSdk = 35
-        versionCode = 19
-        versionName = "1.10.2"
+        versionCode = 20
+        versionName = "1.11.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
